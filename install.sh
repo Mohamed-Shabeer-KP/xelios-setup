@@ -12,6 +12,9 @@ apt update
 apt $APT_OPTS upgrade
 
 echo "[+] Installing required packages..."
+pkg install runit termux-api -y
+pkg install root-repo -y
+pkg install x11-repo -y
 apt $APT_OPTS install runit termux-api
 
 echo "[+] Setup storage..."
