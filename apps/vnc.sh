@@ -1,7 +1,11 @@
 echo "[+] Installing VNC..."
-printf "12345678\n12345678\nn\n" | pkg install -y tigervnc
 
 mkdir -p ~/.vnc
+
+echo "rootroot" | vnpasswd -f > ~/.vnc/passwd
+chmod 600 ~/.vnc/passwd
+
+pkg install -y tigervnc
 
 vncserver :1
 vncserver -kill :1
