@@ -1,9 +1,0 @@
-- name: Install TigerVNC
-  shell: pkg install -y tigervnc
-
-- name: Setup VNC password
-  shell: |
-    mkdir -p ~/.vnc
-    echo "rootroot" | vncpasswd -f > ~/.vnc/passwd
-    chmod 600 ~/.vnc/passwd
-

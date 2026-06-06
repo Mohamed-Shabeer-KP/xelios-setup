@@ -1,2 +1,0 @@
-- name: Install Openbox
-  shell: pkg install -y openbox

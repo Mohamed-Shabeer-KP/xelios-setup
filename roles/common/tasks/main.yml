@@ -1,3 +1,0 @@
-- name: Install base packages
-  shell: |
-    pkg install -y git wget curl

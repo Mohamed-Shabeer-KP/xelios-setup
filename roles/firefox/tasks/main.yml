@@ -1,2 +1,0 @@
-- name: Install Firefox
-  shell: pkg install -y firefox

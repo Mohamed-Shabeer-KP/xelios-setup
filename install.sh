@@ -1,20 +1,34 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-set -e
+echo "[+] Updating system..."
+pkg update -y && pkg upgrade -y
 
-export ANDROID_API_LEVEL=24
+echo "[+] Setup storage..." 
+termux-setup-storage -y
 
-echo "[*] Updating packages..."
-pkg update -y
-pkg upgrade -y
+echo "[+] Setup austo start..." 
+pkg install termux-api -y
 
-echo "[*] Installing dependencies for ansible..."
-pkg install -y python python-pip rust
+mkdir -p ~/.termux/boot
 
-echo "[*] Installing ansible..."
-pip install ansible
+cat > ~/.termux/boot/start.sh <<EOF
+#!/data/data/com.termux/files/usr/bin/bash
 
-echo "[*] Running Ansible..."
-ansible-playbook -i inventory playbook.yml
+# Start runit services
+chmod +x \$HOME/services/*/run
+runsvdir \$HOME/services &
+EOF
 
-echo "[✅] Setup complete!"
+chmod +x ~/.termux/boot/start.sh
+
+echo "[+] install runit..."
+pkg install runit -y
+
+echo "[+] Running app setups..."
+
+for app in apps/*.sh; do
+    echo "[+] Running $app"
+    bash "$app"
+done
+
+echo "[✅ DONE]"

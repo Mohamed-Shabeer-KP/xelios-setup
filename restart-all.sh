@@ -1,0 +1,2 @@
+pkill runsv
+pkill runsvdir
