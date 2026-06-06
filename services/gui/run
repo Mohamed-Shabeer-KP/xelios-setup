@@ -2,3 +2,4 @@
 
 vncserver -kill :1 2>/dev/null
 exec vncserver :1 -geometry 1280x720 -depth 16
+exec openbox

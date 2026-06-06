@@ -5,4 +5,4 @@ echo "[*] Starting Firefox..."
 sleep 3   # wait for GUI
 export DISPLAY=:1
 
-exec firefox --kiosk
+exec firefox
