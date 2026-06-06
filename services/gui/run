@@ -7,3 +7,4 @@ pgrep Xvnc > /dev/null || vncserver :1 -geometry 1280x720 -depth 16
 
 # start desktop session
 exec openbox
+exec tint2
