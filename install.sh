@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 echo "[+] Updating system..."
-pkg update -y && pkg upgrade -y
+pkg update -y && pkg upgrade -y -o Dpkg::Options::="--force-confold"
 
 echo "[+] Installing required packages..."
 pkg install runit termux-api -y
