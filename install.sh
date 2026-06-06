@@ -9,7 +9,7 @@ pkg update -y
 pkg upgrade -y
 
 echo "[*] Installing dependencies for ansible..."
-pkg install -y git python python-pip
+pkg install -y python python-pip
 
 echo "[*] Installing dependencies..."
 pip install ansible
