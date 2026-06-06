@@ -17,8 +17,6 @@ apt $APT_OPTS install x11-repo -y
 
 apt $APT_OPTS install runit termux-api -y
 
-apt $APT_OPTS install runit termux-api
-
 echo "[+] Setup storage..."
 
 if [ ! -d "$HOME/storage" ]; then
