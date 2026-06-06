@@ -2,6 +2,6 @@
 
 echo "[*] Starting runit..."
 
-runsvdir ~/services &
+runsvdir ~/xelios-setup/services 
 
 echo "[✅] All services running!"
