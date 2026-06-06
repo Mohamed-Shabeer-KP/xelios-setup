@@ -51,10 +51,4 @@ for app in apps/*.sh; do
     bash "$app"
 done
 
-echo "[+] Fixing permissions..."
-
-if [ -d "$HOME/xelios-setup/services" ]; then
-    find "$HOME/xelios-setup/services" -type f -name run -exec chmod +x {} \;
-fi
-
 echo "[✅ DONE]"
