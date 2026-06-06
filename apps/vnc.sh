@@ -2,7 +2,7 @@ echo "[+] Installing VNC..."
 
 mkdir -p ~/.vnc
 
-echo "rootroot" | vnpasswd -f > ~/.vnc/passwd
+echo "rootroot" | vncpasswd -f > ~/.vnc/passwd
 chmod 600 ~/.vnc/passwd
 
 pkg install -y tigervnc

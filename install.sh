@@ -17,7 +17,7 @@ cat > ~/.termux/boot/start.sh <<EOF
 #!/data/data/com.termux/files/usr/bin/bash
 
 sleep 5
-runsvdir \$HOME/services &
+runsvdir \$HOME/xelios-setup/services &
 EOF
 
 chmod +x ~/.termux/boot/start.sh
@@ -30,6 +30,6 @@ for app in apps/*.sh; do
 done
 
 echo "[+] Fixing permissions..."
-chmod +x ~/services/*/run
+chmod +x ~/xelios-setup/services/*/run
 
 echo "[✅ DONE]"
