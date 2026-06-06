@@ -1,0 +1,8 @@
+- name: Setup Termux Environment
+  hosts: localhost
+  roles:
+    - common
+    - vnc
+    - openbox
+    - firefox
+    - aria2
