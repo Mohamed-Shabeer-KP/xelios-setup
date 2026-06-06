@@ -5,7 +5,7 @@ export DISPLAY=:1
 # start VNC ONLY if not running
 pgrep Xvnc > /dev/null || vncserver :1 -geometry 1280x720 -depth 16
 
-exec tint2 &
+
 
 # start desktop session
 exec openbox-session
