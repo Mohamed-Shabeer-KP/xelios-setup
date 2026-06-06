@@ -1,5 +1,0 @@
-#!/data/data/com.termux/files/usr/bin/bash
-
-echo "[*] Starting GUI..."
-
-exec vncserver :1 -geometry 1280x720 -depth 16
