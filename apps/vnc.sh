@@ -1,5 +1,5 @@
 echo "[+] Installing VNC..."
-pkg install -y tigervnc
+printf "12345678\n12345678\nn\n" | pkg install -y tigervnc
 
 mkdir -p ~/.vnc
 
