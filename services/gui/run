@@ -6,4 +6,4 @@ export DISPLAY=:1
 pgrep Xvnc > /dev/null || vncserver :1 -geometry 1280x720 -depth 16
 
 # start desktop session
-exec openbox-session
+exec openbox
