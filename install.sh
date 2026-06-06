@@ -11,7 +11,7 @@ pkg upgrade -y
 echo "[*] Installing dependencies for ansible..."
 pkg install -y python python-pip
 
-echo "[*] Installing dependencies..."
+echo "[*] Installing ansible..."
 pip install ansible
 
 echo "[*] Running Ansible..."
