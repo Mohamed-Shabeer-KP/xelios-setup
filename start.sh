@@ -1,14 +1,20 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-BOT_DIR="$HOME/xelios-setup/services/telegram-bot"
+echo "[*] Starting runit system..."
 
-# Ensure run script is executable
-if [ -f "$BOT_DIR/run" ]; then
-    chmod +x "$BOT_DIR/run"
-fi
+SERVICES_DIR="$HOME/xelios-setup/services"
+BOT_DIR="$SERVICES_DIR/telegram-bot"
 
-# Start only bot service
-runsv "$BOT_DIR" &
+# Fix permissions
+find "$SERVICES_DIR" -type f -name run -exec chmod +x {} \;
 
-echo "[✅] Telegram bot service running!"
+# ✅ Start service supervisor (VERY IMPORTANT)
+runsvdir "$SERVICES_DIR" &
 
+# Give it time to initialize
+sleep 2
+
+# ✅ Start ONLY telegram bot
+sv up "$BOT_DIR"
+
+echo "[✅] Bot is running. Use Telegram to control other services."
