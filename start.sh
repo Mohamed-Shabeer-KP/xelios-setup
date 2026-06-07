@@ -8,6 +8,6 @@ if [ -d "$HOME/xelios-setup/services" ]; then
     find "$HOME/xelios-setup/services" -type f -name run -exec chmod +x {} \;
 fi
 
-runsvdir ~/xelios-setup/services 
+runsv ~/xelios-setup/services/telegram-bot
 
 echo "[✅] All services running!"
