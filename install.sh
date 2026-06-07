@@ -35,7 +35,7 @@ cat > "$HOME/.termux/boot/start.sh" <<'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
 
 sleep 5
-runsv "$HOME/xelios-setup/services/telegram-bot" &
+runsvdir "$HOME/xelios-setup/services"  &
 EOF
 
 chmod +x "$HOME/.termux/boot/start.sh"
