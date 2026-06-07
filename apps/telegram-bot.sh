@@ -9,8 +9,7 @@ TELEGRAM_BOT_TOKEN=$TOKEN
 EOF
 fi
 
-# ✅ LOAD + EXPORT (this is what you need)
-export $(grep -v '^#' "$ENV_FILE" | xargs)
+source ~/xelios-setup/.env
 
 # test
 echo "Token loaded: $TELEGRAM_BOT_TOKEN"
