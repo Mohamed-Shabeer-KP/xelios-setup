@@ -1,3 +1,26 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+ENV_FILE="$HOME/xelios-setup/.env"
+
+# Load environment variables
+if [ -f "$ENV_FILE" ]; then
+    source "$ENV_FILE"
+    export TELEGRAM_BOT_TOKEN
+fi
+
+# Debug (optional)
+echo "[*] Token length: ${#TELEGRAM_BOT_TOKEN}"
+
+# Fail if missing
+if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+    echo "[ERROR] TELEGRAM_BOT_TOKEN not set!"
+    exit 1
+fi
+
+# Start bot
+exec python "$HOME/bot.py"
+
+
 echo "[+] Installing Telegram Bot..."
 
 pip install python-telegram-bot
