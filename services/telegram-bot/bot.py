@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 """
-Xelios Telegram Service Manager (FIXED FINAL)
-- Accurate runit status detection
-- Safe Telegram callback handling
-- Correct service lifecycle control
+Xelios Telegram Service Manager (FINAL)
 """
 
 import os
@@ -31,15 +28,11 @@ for uid in os.getenv("ALLOWED_USER_IDS", "").split(","):
 
 
 # ---------------- SECURITY ----------------
-def is_allowed(user_id: int) -> bool:
+def is_allowed(user_id):
     return (not ALLOWED_USERS) or (user_id in ALLOWED_USERS)
 
 
 # ---------------- HELPERS ----------------
-def safe_message(update: Update):
-    return update.message or (update.callback_query.message if update.callback_query else None)
-
-
 def service_path(name):
     return os.path.join(SERVICES_DIR, name)
 
@@ -56,7 +49,7 @@ def list_services():
     ]
 
 
-# 🔥 FIXED: correct runit status check
+# ✅ FIXED STATUS CHECK
 def is_running(name):
     try:
         path = service_path(name)
@@ -67,8 +60,7 @@ def is_running(name):
             text=True
         )
 
-        # BEST RELIABLE CHECK: exit code 0 = running
-        return result.returncode == 0
+        return result.stdout.startswith("run:")
 
     except Exception:
         return False
@@ -78,17 +70,12 @@ def start_service(name):
     try:
         path = service_path(name)
 
-        subprocess.run(["sv", "up", path], capture_output=True, text=True)
+        # remove "down" file if exists
+        subprocess.run(["rm", "-f", f"{path}/down"])
 
-        result = subprocess.run(
-            ["sv", "status", path],
-            capture_output=True,
-            text=True
-        )
+        subprocess.run(["sv", "up", path], capture_output=True)
 
-        if result.returncode == 0:
-            return True, f"🟢 {name} started"
-        return False, f"🔴 {name} failed to start:\n{result.stdout}"
+        return True, f"🟢 {name} started"
 
     except Exception as e:
         return False, str(e)
@@ -98,17 +85,10 @@ def stop_service(name):
     try:
         path = service_path(name)
 
-        subprocess.run(["sv", "down", path], capture_output=True, text=True)
+        subprocess.run(["sv", "down", path], capture_output=True)
+        subprocess.run(["touch", f"{path}/down"])
 
-        result = subprocess.run(
-            ["sv", "status", path],
-            capture_output=True,
-            text=True
-        )
-
-        if result.returncode != 0:
-            return True, f"🔴 {name} stopped"
-        return False, f"⚠️ {name} may still be running:\n{result.stdout}"
+        return True, f"🔴 {name} stopped"
 
     except Exception as e:
         return False, str(e)
@@ -116,16 +96,17 @@ def stop_service(name):
 
 def start_all():
     try:
-        subprocess.Popen(["runsvdir", SERVICES_DIR])
-        return True, "All services starting"
+        for s in list_services():
+            start_service(s)
+        return True, "All services started"
     except Exception as e:
         return False, str(e)
 
 
 def stop_all():
     try:
-        subprocess.run(["pkill", "runsvdir"])
-        subprocess.run(["pkill", "runsv"])
+        for s in list_services():
+            stop_service(s)
         return True, "All services stopped"
     except Exception as e:
         return False, str(e)
@@ -143,25 +124,17 @@ def main_menu():
     ])
 
 
-async def show_main(update: Update):
-    msg = safe_message(update)
-    if not msg:
-        return
-
-    await msg.reply_text(
-        "🤖 *Xelios Service Manager*",
-        reply_markup=main_menu(),
-        parse_mode="Markdown"
-    )
-
-
 # ---------------- COMMAND ----------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_allowed(update.effective_user.id):
         await update.message.reply_text("❌ Unauthorized")
         return
 
-    await show_main(update)
+    await update.message.reply_text(
+        "🤖 *Xelios Service Manager*",
+        reply_markup=main_menu(),
+        parse_mode="Markdown"
+    )
 
 
 # ---------------- ROUTER ----------------
@@ -217,7 +190,7 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ---- BACK ----
     elif data == "back":
-        await show_main(update)
+        await start(update, context)
 
     # ---- SERVICE DETAILS ----
     elif data.startswith("svc:"):
@@ -260,11 +233,6 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
-# ---------------- ERROR HANDLER ----------------
-async def error_handler(update, context):
-    logger.error("Error occurred:", exc_info=context.error)
-
-
 # ---------------- MAIN ----------------
 def main():
     if not BOT_TOKEN:
@@ -275,7 +243,6 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(router))
-    app.add_error_handler(error_handler)
 
     print("🤖 Bot running...")
     app.run_polling()
