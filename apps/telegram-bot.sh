@@ -1,53 +1,28 @@
-#!/data/data/com.termux/files/usr/bin/bash
-
-ENV_FILE="$HOME/xelios-setup/.env"
-
-# Load environment variables
-if [ -f "$ENV_FILE" ]; then
-    source "$ENV_FILE"
-    export TELEGRAM_BOT_TOKEN
-fi
-
-# Debug (optional)
-echo "[*] Token length: ${#TELEGRAM_BOT_TOKEN}"
-
-# Fail if missing
-if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
-    echo "[ERROR] TELEGRAM_BOT_TOKEN not set!"
-    exit 1
-fi
-
-# Start bot
-exec python "$HOME/bot.py"
-
-
 echo "[+] Installing Telegram Bot..."
 
 pip install python-telegram-bot
 
-ENV_FILE="$HOME/xelios-setup/.env"
+ENV_FILE="$HOME/xelios-setup/services/telegram-bot/.env"
 
 mkdir -p "$(dirname "$ENV_FILE")"
 
+# Create .env if missing
 if [ ! -f "$ENV_FILE" ]; then
     read -s -p "Enter Telegram Bot Token: " TOKEN
     echo ""
 
-    printf "TELEGRAM_BOT_TOKEN=%s\n" "$TOKEN" > "$ENV_FILE"
+    echo "TELEGRAM_BOT_TOKEN=$TOKEN" > "$ENV_FILE"
 
-    echo "[+] Token saved"
+    echo "[+] Token saved to $ENV_FILE"
 fi
 
-# ✅ Load env safely (bulletproof)
-while IFS='=' read -r key value; do
-    if [ "$key" = "TELEGRAM_BOT_TOKEN" ]; then
-        export TELEGRAM_BOT_TOKEN="$value"
-    fi
-done < "$ENV_FILE"
+# ✅ Load it (simple way)
+source "$ENV_FILE"
+export TELEGRAM_BOT_TOKEN
 
 # ✅ Debug
 if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
-    echo "[❌ ERROR] Token still empty"
+    echo "[❌ ERROR] Token empty"
 else
-    echo "[✅ Token loaded (length: ${#TELEGRAM_BOT_TOKEN})"
+    echo "[✅ Token loaded (${#TELEGRAM_BOT_TOKEN} chars)"
 fi
