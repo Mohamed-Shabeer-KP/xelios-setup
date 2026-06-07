@@ -1,15 +1,14 @@
+echo "[+] Installing Telegram Bot..."
+
+pip install python-telegram-bot
+
+echo "[+] Setting up environment variables..."
+
 ENV_FILE="$HOME/xelios-setup/.env"
 
-# create if not exists
-if [ ! -f "$ENV_FILE" ]; then
-    read -p "Enter Telegram Bot Token: " TOKEN
-
-    cat > "$ENV_FILE" <<EOF
-TELEGRAM_BOT_TOKEN=$TOKEN
-EOF
+if [ -f "$ENV_FILE" ]; then
+    source "$ENV_FILE"
+    export TELEGRAM_BOT_TOKEN
 fi
 
-source ~/xelios-setup/.env
-
-# test
-echo "Token loaded: $TELEGRAM_BOT_TOKEN"
+echo "TOKEN: $TELEGRAM_BOT_TOKEN"
