@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash#!/data/data/com.termux*] Starting Telegram bot only..."
+#!/data/data/com.termux/files/usr/bin/bash
 
 BOT_DIR="$HOME/xelios-setup/services/telegram-bot"
 
