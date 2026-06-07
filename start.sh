@@ -8,13 +8,20 @@ BOT_DIR="$SERVICES_DIR/telegram-bot"
 # Fix permissions
 find "$SERVICES_DIR" -type f -name run -exec chmod +x {} \;
 
-# ✅ Start service supervisor (VERY IMPORTANT)
+# Ensure non-bot services are DOWN
+for svc in "$SERVICES_DIR"/*; do
+    [ "$(basename "$svc")" != "telegram-bot" ] && touch "$svc/down"
+done
+
+# Ensure bot is UP
+rm -f "$BOT_DIR/down"
+
+# Start supervisor
 runsvdir "$SERVICES_DIR" &
 
-# Give it time to initialize
 sleep 2
 
-# ✅ Start ONLY telegram bot
+# Explicitly start bot
 sv up "$BOT_DIR"
 
-echo "[✅] Bot is running. Use Telegram to control other services."
+echo "[✅] Bot running, other services disabled"
