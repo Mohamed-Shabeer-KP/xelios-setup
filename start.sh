@@ -1,13 +1,14 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/data/data/com.termux/files/usr/bin/bash#!/data/data/com.termux*] Starting Telegram bot only..."
 
-echo "[*] Starting runit..."
+BOT_DIR="$HOME/xelios-setup/services/telegram-bot"
 
-echo "[+] Fixing permissions..."
-
-if [ -d "$HOME/xelios-setup/services" ]; then
-    find "$HOME/xelios-setup/services" -type f -name run -exec chmod +x {} \;
+# Ensure run script is executable
+if [ -f "$BOT_DIR/run" ]; then
+    chmod +x "$BOT_DIR/run"
 fi
 
-runsvdir "$HOME/xelios-setup/services" 
+# Start only bot service
+runsv "$BOT_DIR" &
 
-echo "[✅] All services running!"
+echo "[✅] Telegram bot service running!"
+
