@@ -20,7 +20,7 @@ API_ID = 30299030
 
 logging.basicConfig(level=logging.INFO)
 
-SESSION_PATH = os.path.expanduser("~/xelios-setup/services/telegram-session")
+SESSION_PATH = os.path.expanduser("~/xelios-setup/services/telegram-session/session")
 
 client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
 
