@@ -22,9 +22,11 @@ logging.basicConfig(level=logging.INFO)
 
 client = TelegramClient("session", API_ID, API_HASH)
 
+# ✅ Login state (FIXED)
 LOGIN_STATE = {
     "step": None,
-    "phone": None
+    "phone": None,
+    "phone_code_hash": None
 }
 
 # ---------------- HELPERS ----------------
@@ -100,7 +102,7 @@ async def start_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if await client.is_user_authorized():
         if update.callback_query:
-            await update.callback_query.answer("Already logged in", show_alert=True)
+            await update.callback_query.answer("✅ Already logged in", show_alert=True)
         else:
             await update.message.reply_text("✅ Already logged in")
         return
@@ -112,25 +114,35 @@ async def start_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("📱 Send phone number (+countrycode)")
 
+# ✅ FIXED message handler (IMPORTANT)
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
-    # STEP 1: PHONE
+    # ---- PHONE STEP ----
     if LOGIN_STATE["step"] == "phone":
         LOGIN_STATE["phone"] = text
 
         await client.connect()
-        await client.send_code_request(text)
+        result = await client.send_code_request(text)
 
+        LOGIN_STATE["phone_code_hash"] = result.phone_code_hash  # ✅ FIX
         LOGIN_STATE["step"] = "code"
-        await update.message.reply_text("📩 OTP sent. Send code")
 
-    # STEP 2: OTP
+        await update.message.reply_text("📩 OTP sent. Send the code")
+
+    # ---- OTP STEP ----
     elif LOGIN_STATE["step"] == "code":
         try:
-            await client.sign_in(LOGIN_STATE["phone"], text)
+            await client.sign_in(
+                phone=LOGIN_STATE["phone"],
+                code=text,
+                phone_code_hash=LOGIN_STATE["phone_code_hash"]  # ✅ FIX
+            )
 
             LOGIN_STATE["step"] = None
+            LOGIN_STATE["phone"] = None
+            LOGIN_STATE["phone_code_hash"] = None
+
             await update.message.reply_text("✅ Login successful!")
 
         except Exception as e:
@@ -143,7 +155,6 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     data = query.data
 
-    # STATUS
     if data == "status":
         text = "📊 *Service Status*\n\n"
         for s in list_services():
@@ -156,7 +167,6 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
 
-    # SERVICES
     elif data == "services":
         keyboard = [
             [InlineKeyboardButton(s, callback_data=f"svc:{s}")]
@@ -169,15 +179,12 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-    # BACK
     elif data == "back":
         await render_main_menu(query)
 
-    # LOGIN
     elif data == "login":
         await start_login(update, context)
 
-    # SERVICE DETAILS
     elif data.startswith("svc:"):
         name = data.split(":")[1]
         running = is_running(name)
@@ -196,19 +203,15 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
 
-    # START
     elif data.startswith("start:"):
-        name = data.split(":")[1]
         await query.edit_message_text(
-            start_service(name),
+            start_service(data.split(":")[1]),
             reply_markup=await main_menu()
         )
 
-    # STOP
     elif data.startswith("stop:"):
-        name = data.split(":")[1]
         await query.edit_message_text(
-            stop_service(name),
+            stop_service(data.split(":")[1]),
             reply_markup=await main_menu()
         )
 
