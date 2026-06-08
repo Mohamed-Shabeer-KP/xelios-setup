@@ -10,7 +10,7 @@ find "$SERVICES_DIR" -type f -name run -exec chmod +x {} \;
 
 # Ensure non-bot services are DOWN
 for svc in "$SERVICES_DIR"/*; do
-    [ "$(basename "$svc")" != "telegram-bot" ] && touch "$svc/down"
+    [ "$(basename "$svc")" != "tg-bot" ] && touch "$svc/down"
 done
 
 # Ensure bot is UP
