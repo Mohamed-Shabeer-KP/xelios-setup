@@ -21,9 +21,6 @@ API_ID = 30299030
 # ✅ Shared session (same for downloader)
 SESSION_PATH = "/home/YOUR_USERNAME/xelios-setup/services/telegram-session/session"
 
-# ✅ ensure directory exists
-os.makedirs(os.path.dirname(SESSION_PATH), exist_ok=True)
-
 logging.basicConfig(level=logging.INFO)
 
 client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
