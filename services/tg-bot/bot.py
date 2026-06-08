@@ -56,6 +56,14 @@ def main_menu():
         [InlineKeyboardButton("🔧 Services", callback_data="services")]
     ])
 
+# ---------------- RENDER HELPERS ----------------
+async def render_main_menu(query):
+    await query.edit_message_text(
+        "🤖 *Xelios Service Manager*",
+        reply_markup=main_menu(),
+        parse_mode="Markdown"
+    )
+
 # ---------------- COMMAND ----------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -99,9 +107,9 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-    # ---- BACK ----
+    # ---- BACK TO MAIN MENU ----
     elif data == "back":
-        await start(update, context)
+        await render_main_menu(query)
 
     # ---- SERVICE DETAILS ----
     elif data.startswith("svc:"):
@@ -127,14 +135,20 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         name = data.split("start:")[1]
         msg = start_service(name)
 
-        await query.edit_message_text(msg, reply_markup=main_menu())
+        await query.edit_message_text(
+            msg,
+            reply_markup=main_menu()
+        )
 
     # ---- STOP ----
     elif data.startswith("stop:"):
         name = data.split("stop:")[1]
         msg = stop_service(name)
 
-        await query.edit_message_text(msg, reply_markup=main_menu())
+        await query.edit_message_text(
+            msg,
+            reply_markup=main_menu()
+        )
 
 # ---------------- MAIN ----------------
 def main():
@@ -150,6 +164,6 @@ def main():
     print("🤖 Bot running...")
     app.run_polling()
 
-
+# ---------------- ENTRY ----------------
 if __name__ == "__main__":
     main()
