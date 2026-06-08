@@ -30,4 +30,4 @@ fi
 # Create session dir for Telethon
 mkdir -p ~/xelios-setup/telegram-session
 
-chmod 700 ~/xelios-setup/telegram-session    
+chmod -R 777 ~/xelios-setup/services/telegram-session
