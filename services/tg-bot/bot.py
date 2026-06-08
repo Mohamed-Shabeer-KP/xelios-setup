@@ -18,13 +18,17 @@ BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 API_HASH = os.getenv("TELEGRAM_API_HASH", "")
 API_ID = 30299030
 
-logging.basicConfig(level=logging.INFO)
+# ✅ Shared session (same for downloader)
+SESSION_PATH = "/home/YOUR_USERNAME/xelios-setup/services/telegram-session/session"
 
-SESSION_PATH = os.path.expanduser("~/xelios-setup/telegram-session/session")
+# ✅ ensure directory exists
+os.makedirs(os.path.dirname(SESSION_PATH), exist_ok=True)
+
+logging.basicConfig(level=logging.INFO)
 
 client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
 
-# ✅ Login state (FIXED)
+# ✅ Login state
 LOGIN_STATE = {
     "step": None,
     "phone": None,
@@ -58,19 +62,16 @@ def is_running(name):
 
 def start_service(name):
     path = service_path(name)
-    subprocess.run(["rm", "-f", f"{path}/down"])
     subprocess.run(["sv", "up", path])
     return f"🟢 {name} started"
 
 def stop_service(name):
     path = service_path(name)
     subprocess.run(["sv", "down", path])
-    subprocess.run(["touch", f"{path}/down"])
     return f"🔴 {name} stopped"
 
 # ---------------- UI ----------------
 async def main_menu():
-    await client.connect()
     logged_in = await client.is_user_authorized()
 
     buttons = [
@@ -103,45 +104,53 @@ async def start_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await client.connect()
 
     if await client.is_user_authorized():
-        if update.callback_query:
-            await update.callback_query.answer("✅ Already logged in", show_alert=True)
-        else:
-            await update.message.reply_text("✅ Already logged in")
+        LOGIN_STATE["step"] = None
+        await update.callback_query.answer("✅ Already logged in", show_alert=True)
         return
 
+    # ✅ RESET state (IMPORTANT)
     LOGIN_STATE["step"] = "phone"
+    LOGIN_STATE["phone"] = None
+    LOGIN_STATE["phone_code_hash"] = None
 
-    if update.callback_query:
-        await update.callback_query.edit_message_text("📱 Send phone number (+countrycode)")
-    else:
-        await update.message.reply_text("📱 Send phone number (+countrycode)")
+    await update.callback_query.edit_message_text("📱 Send phone number (+countrycode)")
 
-# ✅ FIXED message handler (IMPORTANT)
+# ✅ SAFE LOGIN HANDLER
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
-    await client.connect()
-
-    # ✅ If no login flow, ignore
+    # ✅ Ignore if no login flow
     if LOGIN_STATE["step"] is None:
         return
 
-    # ✅ Already logged in → stop everything
+    await client.connect()
+
+    # ✅ Prevent duplicate login
     if await client.is_user_authorized():
         LOGIN_STATE["step"] = None
-        await update.message.reply_text("✅ Already logged in. Aborting login flow.")
+        await update.message.reply_text("✅ Already logged in.")
         return
 
     # ---- PHONE STEP ----
     if LOGIN_STATE["step"] == "phone":
+
+        # ✅ Prevent multiple requests
+        if LOGIN_STATE["phone"] is not None:
+            await update.message.reply_text("⚠️ OTP already sent. Enter that code.")
+            return
+
         LOGIN_STATE["phone"] = text
 
-        result = await client.send_code_request(text)
+        try:
+            result = await client.send_code_request(text)
+            LOGIN_STATE["phone_code_hash"] = result.phone_code_hash
+            LOGIN_STATE["step"] = "code"
 
-        LOGIN_STATE["phone_code_hash"] = result.phone_code_hash
-        LOGIN_STATE["step"] = "code"
+            await update.message.reply_text("📩 OTP sent. Enter the code")
 
-        await update.message.reply_text("📩 OTP sent. Send the code")
+        except Exception as e:
+            LOGIN_STATE["step"] = None
+            await update.message.reply_text(f"❌ Failed to send code: {e}")
 
     # ---- OTP STEP ----
     elif LOGIN_STATE["step"] == "code":
@@ -156,10 +165,20 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             LOGIN_STATE["phone"] = None
             LOGIN_STATE["phone_code_hash"] = None
 
-            await update.message.reply_text("✅ Login successful!")
+            await update.message.reply_text("✅ Login successful ✅")
+
+            # ✅ OPTIONAL: restart downloader automatically
+            subprocess.run(["sv", "restart", service_path("tg-downloader")])
 
         except Exception as e:
-            await update.message.reply_text(f"❌ {e}")
+            # ✅ RESET everything on failure
+            LOGIN_STATE["step"] = None
+            LOGIN_STATE["phone"] = None
+            LOGIN_STATE["phone_code_hash"] = None
+
+            await update.message.reply_text(
+                "❌ Invalid/expired code.\nWait 30 sec and tap Login again."
+            )
 
 # ---------------- ROUTER ----------------
 async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -174,11 +193,7 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             icon = "🟢" if is_running(s) else "🔴"
             text += f"{icon} {s}\n"
 
-        await query.edit_message_text(
-            text,
-            reply_markup=await main_menu(),
-            parse_mode="Markdown"
-        )
+        await query.edit_message_text(text, reply_markup=await main_menu(), parse_mode="Markdown")
 
     elif data == "services":
         keyboard = [
@@ -187,10 +202,7 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="back")])
 
-        await query.edit_message_text(
-            "🔧 Services:",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+        await query.edit_message_text("🔧 Services:", reply_markup=InlineKeyboardMarkup(keyboard))
 
     elif data == "back":
         await render_main_menu(query)
@@ -217,16 +229,10 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif data.startswith("start:"):
-        await query.edit_message_text(
-            start_service(data.split(":")[1]),
-            reply_markup=await main_menu()
-        )
+        await query.edit_message_text(start_service(data.split(":")[1]), reply_markup=await main_menu())
 
     elif data.startswith("stop:"):
-        await query.edit_message_text(
-            stop_service(data.split(":")[1]),
-            reply_markup=await main_menu()
-        )
+        await query.edit_message_text(stop_service(data.split(":")[1]), reply_markup=await main_menu())
 
 # ---------------- MAIN ----------------
 def main():
