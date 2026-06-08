@@ -7,8 +7,7 @@ import asyncio
 
 API_HASH = os.getenv("TELEGRAM_API_HASH", "")
 
-api_id = 30299030
-api_hash = API_HASH
+API_ID = 30299030
 
 CHANNEL = "Xelios Downloader"
 DOWNLOAD_DIR = "../storage/shared/download"
