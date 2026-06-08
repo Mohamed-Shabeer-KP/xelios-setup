@@ -6,4 +6,9 @@ if [ -f "$ENV_FILE" ]; then
     export $(cat "$ENV_FILE" | xargs)
 fi
 
+ENV_FILE="$HOME/xelios-setup/services/tg-downloader/.env"
+if [ -f "$ENV_FILE" ]; then
+    export $(cat "$ENV_FILE" | xargs)
+fi
+
 exec python3 "$HOME/xelios-setup/services/tg-bot/bot.py"
