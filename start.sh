@@ -22,6 +22,6 @@ runsvdir "$SERVICES_DIR"
 sleep 2
 
 # Explicitly start bot
-sv up "$BOT_DIR"
+sv up "$BOT_DIR" 
 
 echo "[✅] Bot running, other services disabled"
