@@ -16,15 +16,12 @@ from telethon import TelegramClient
 SERVICES_DIR = os.path.expanduser("~/xelios-setup/services")
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 API_HASH = os.getenv("TELEGRAM_API_HASH", "")
-
 API_ID = 30299030
 
 logging.basicConfig(level=logging.INFO)
 
-# ✅ Telethon client (shared session)
 client = TelegramClient("session", API_ID, API_HASH)
 
-# ✅ Login state
 LOGIN_STATE = {
     "step": None,
     "phone": None
@@ -68,17 +65,24 @@ def stop_service(name):
     return f"🔴 {name} stopped"
 
 # ---------------- UI ----------------
-def main_menu():
-    return InlineKeyboardMarkup([
+async def main_menu():
+    await client.connect()
+    logged_in = await client.is_user_authorized()
+
+    buttons = [
         [InlineKeyboardButton("📊 Status", callback_data="status")],
-        [InlineKeyboardButton("🔧 Services", callback_data="services")],
-        [InlineKeyboardButton("🔐 Login", callback_data="login")]
-    ])
+        [InlineKeyboardButton("🔧 Services", callback_data="services")]
+    ]
+
+    if not logged_in:
+        buttons.append([InlineKeyboardButton("🔐 Login", callback_data="login")])
+
+    return InlineKeyboardMarkup(buttons)
 
 async def render_main_menu(query):
     await query.edit_message_text(
         "🤖 *Xelios Service Manager*",
-        reply_markup=main_menu(),
+        reply_markup=await main_menu(),
         parse_mode="Markdown"
     )
 
@@ -86,12 +90,21 @@ async def render_main_menu(query):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🤖 *Xelios Service Manager*",
-        reply_markup=main_menu(),
+        reply_markup=await main_menu(),
         parse_mode="Markdown"
     )
 
 # ---------------- LOGIN FLOW ----------------
 async def start_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await client.connect()
+
+    if await client.is_user_authorized():
+        if update.callback_query:
+            await update.callback_query.answer("Already logged in", show_alert=True)
+        else:
+            await update.message.reply_text("✅ Already logged in")
+        return
+
     LOGIN_STATE["step"] = "phone"
 
     if update.callback_query:
@@ -102,7 +115,7 @@ async def start_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
-    # PHONE STEP
+    # STEP 1: PHONE
     if LOGIN_STATE["step"] == "phone":
         LOGIN_STATE["phone"] = text
 
@@ -112,7 +125,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         LOGIN_STATE["step"] = "code"
         await update.message.reply_text("📩 OTP sent. Send code")
 
-    # OTP STEP
+    # STEP 2: OTP
     elif LOGIN_STATE["step"] == "code":
         try:
             await client.sign_in(LOGIN_STATE["phone"], text)
@@ -127,16 +140,23 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+
     data = query.data
 
+    # STATUS
     if data == "status":
         text = "📊 *Service Status*\n\n"
         for s in list_services():
             icon = "🟢" if is_running(s) else "🔴"
             text += f"{icon} {s}\n"
 
-        await query.edit_message_text(text, reply_markup=main_menu(), parse_mode="Markdown")
+        await query.edit_message_text(
+            text,
+            reply_markup=await main_menu(),
+            parse_mode="Markdown"
+        )
 
+    # SERVICES
     elif data == "services":
         keyboard = [
             [InlineKeyboardButton(s, callback_data=f"svc:{s}")]
@@ -144,14 +164,20 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="back")])
 
-        await query.edit_message_text("🔧 Services:", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.edit_message_text(
+            "🔧 Services:",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
 
+    # BACK
     elif data == "back":
         await render_main_menu(query)
 
+    # LOGIN
     elif data == "login":
         await start_login(update, context)
 
+    # SERVICE DETAILS
     elif data.startswith("svc:"):
         name = data.split(":")[1]
         running = is_running(name)
@@ -170,14 +196,28 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
 
+    # START
     elif data.startswith("start:"):
-        await query.edit_message_text(start_service(data.split(":")[1]), reply_markup=main_menu())
+        name = data.split(":")[1]
+        await query.edit_message_text(
+            start_service(name),
+            reply_markup=await main_menu()
+        )
 
+    # STOP
     elif data.startswith("stop:"):
-        await query.edit_message_text(stop_service(data.split(":")[1]), reply_markup=main_menu())
+        name = data.split(":")[1]
+        await query.edit_message_text(
+            stop_service(name),
+            reply_markup=await main_menu()
+        )
 
 # ---------------- MAIN ----------------
 def main():
+    if not BOT_TOKEN:
+        print("❌ TELEGRAM_BOT_TOKEN not set")
+        return
+
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
@@ -187,5 +227,6 @@ def main():
     print("🤖 Bot running...")
     app.run_polling()
 
+# ---------------- ENTRY ----------------
 if __name__ == "__main__":
     main()
