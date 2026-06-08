@@ -26,3 +26,8 @@ if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
 else
     echo "[✅ Token loaded (${#TELEGRAM_BOT_TOKEN} chars)"
 fi
+
+# Create session dir for Telethon
+mkdir -p ~/xelios-setup/telegram-session
+
+chmod 700 ~/xelios-setup/telegram-session    
