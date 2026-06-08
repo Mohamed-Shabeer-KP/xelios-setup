@@ -118,14 +118,25 @@ async def start_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
+    await client.connect()
+
+    # ✅ If no login flow, ignore
+    if LOGIN_STATE["step"] is None:
+        return
+
+    # ✅ Already logged in → stop everything
+    if await client.is_user_authorized():
+        LOGIN_STATE["step"] = None
+        await update.message.reply_text("✅ Already logged in. Aborting login flow.")
+        return
+
     # ---- PHONE STEP ----
     if LOGIN_STATE["step"] == "phone":
         LOGIN_STATE["phone"] = text
 
-        await client.connect()
         result = await client.send_code_request(text)
 
-        LOGIN_STATE["phone_code_hash"] = result.phone_code_hash  # ✅ FIX
+        LOGIN_STATE["phone_code_hash"] = result.phone_code_hash
         LOGIN_STATE["step"] = "code"
 
         await update.message.reply_text("📩 OTP sent. Send the code")
@@ -136,7 +147,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await client.sign_in(
                 phone=LOGIN_STATE["phone"],
                 code=text,
-                phone_code_hash=LOGIN_STATE["phone_code_hash"]  # ✅ FIX
+                phone_code_hash=LOGIN_STATE["phone_code_hash"]
             )
 
             LOGIN_STATE["step"] = None
