@@ -24,7 +24,6 @@ SESSION_PATH = os.path.expanduser("~/xelios-setup/telegram-session/session")
 
 client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
 
-
 # ✅ Login state (FIXED)
 LOGIN_STATE = {
     "step": None,
