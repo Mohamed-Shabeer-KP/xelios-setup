@@ -14,7 +14,7 @@ DOWNLOAD_DIR = "../storage/shared/download"
 
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-SESSION_PATH = os.path.expanduser("~/xelios-setup/telegram-session/session")
+SESSION_PATH = os.path.expanduser("~/xelios-setup/services/telegram-session/session")
 
 client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
 
