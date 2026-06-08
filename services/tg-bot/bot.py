@@ -19,7 +19,7 @@ API_HASH = os.getenv("TELEGRAM_API_HASH", "")
 API_ID = 30299030
 
 # ✅ Shared session (same for downloader)
-SESSION_PATH = "/home/YOUR_USERNAME/xelios-setup/services/telegram-session/session"
+SESSION_PATH = "~/xelios-setup/services/telegram-session/session"
 
 logging.basicConfig(level=logging.INFO)
 
