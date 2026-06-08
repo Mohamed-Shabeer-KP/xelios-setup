@@ -1,4 +1,4 @@
-echo "[+] Installing Telegram Bot..."
+echo "[+] Installing Telegram Downloader..."
 
 pip install telethon
 

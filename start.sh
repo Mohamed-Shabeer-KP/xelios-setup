@@ -3,7 +3,7 @@
 echo "[*] Starting runit system..."
 
 SERVICES_DIR="$HOME/xelios-setup/services"
-BOT_DIR="$SERVICES_DIR/telegram-bot"
+BOT_DIR="$SERVICES_DIR/tg-bot"
 
 # Fix permissions
 find "$SERVICES_DIR" -type f -name run -exec chmod +x {} \;
