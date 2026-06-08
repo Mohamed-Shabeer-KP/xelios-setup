@@ -2,7 +2,7 @@ echo "[+] Installing Telegram Bot..."
 
 pip install python-telegram-bot
 
-ENV_FILE="$HOME/xelios-setup/services/telegram-bot/.env"
+ENV_FILE="$HOME/xelios-setup/services/tg-bot/.env"
 
 mkdir -p "$(dirname "$ENV_FILE")"
 
