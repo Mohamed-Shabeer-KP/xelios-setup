@@ -15,7 +15,9 @@ DOWNLOAD_DIR = "../storage/shared/download"
 
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-client = TelegramClient("session", api_id, api_hash)
+SESSION_PATH = os.path.expanduser("~/xelios-setup/telegram-session/session")
+
+client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
 
 # ---------------- ENSURE LOGIN ----------------
 async def ensure_logged_in():
