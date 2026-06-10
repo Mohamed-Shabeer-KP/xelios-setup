@@ -147,7 +147,7 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if name == "tg-downloader":
             try:
                 result = subprocess.run(
-                    ["python3", "/full/path/to/tg-downloader.py", "status"],
+                    ["python3", "~/xelios-setup/services/tg-downloader/bot.py", "status"],
                     capture_output=True,
                     text=True
                 )
