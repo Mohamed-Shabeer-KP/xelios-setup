@@ -3,23 +3,24 @@
 import os
 import asyncio
 import logging
-import warnings
 import sys
 
 from telethon import TelegramClient, events
 
-warnings.filterwarnings("ignore")
-
 # ---------------- CONFIG ----------------
 API_ID = 30299030
 API_HASH = os.getenv("TELEGRAM_API_HASH")
+
+PHONE_NUMBER = "+917025257580"  # 👈 CHANGE THIS
 
 SESSION_PATH = os.path.expanduser(
     "~/xelios-setup/services/tg-downloader/session"
 )
 
 DOWNLOAD_DIR = os.path.expanduser("~/xelios-downloads")
+
 PAUSE_FILE = "/tmp/tg_downloader_pause"
+LOGIN_FILE = "/tmp/tg_login_code"
 
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
@@ -27,14 +28,7 @@ logging.basicConfig(level=logging.INFO)
 
 client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
 
-# ---------------- STATE ----------------
 queue = asyncio.Queue()
-
-login_state = {
-    "step": None,
-    "phone": None,
-    "phone_code_hash": None
-}
 
 # ---------------- CLI ----------------
 def cli():
@@ -52,19 +46,38 @@ def cli():
             os.remove(PAUSE_FILE)
         sys.exit(0)
 
-    elif cmd == "status":
-        async def check():
-            await client.connect()
-            if await client.is_user_authorized():
-                print("LOGGED_IN")
-            else:
-                print("NOT_LOGGED_IN")
-            await client.disconnect()
+# ---------------- LOGIN ----------------
+async def auto_login():
+    await client.connect()
 
-        asyncio.run(check())
-        sys.exit(0)
+    if await client.is_user_authorized():
+        print("✅ Already logged in")
+        return
 
-# ---------------- PROGRESS BAR ----------------
+    print("🔐 Sending OTP...")
+
+    result = await client.send_code_request(PHONE_NUMBER)
+    phone_code_hash = result.phone_code_hash
+
+    print("📩 OTP sent. Waiting for /otp ...")
+
+    while not os.path.exists(LOGIN_FILE):
+        await asyncio.sleep(1)
+
+    with open(LOGIN_FILE) as f:
+        code = f.read().strip()
+
+    os.remove(LOGIN_FILE)
+
+    await client.sign_in(
+        phone=PHONE_NUMBER,
+        code=code,
+        phone_code_hash=phone_code_hash
+    )
+
+    print("✅ Login successful")
+
+# ---------------- PROGRESS ----------------
 def bar(p):
     return "█" * (p // 10) + "░" * (10 - p // 10)
 
@@ -75,9 +88,7 @@ async def progress_cb(msg, current, total):
     pct = int(current * 100 / total)
 
     try:
-        await msg.edit(
-            f"⬇️ Downloading...\n[{bar(pct)}] {pct}%"
-        )
+        await msg.edit(f"⬇️ Downloading...\n[{bar(pct)}] {pct}%")
     except:
         pass
 
@@ -89,7 +100,6 @@ async def worker():
         try:
             ui = await event.reply("⬇️ Starting download...")
 
-            # pause support
             while os.path.exists(PAUSE_FILE):
                 await asyncio.sleep(1)
 
@@ -111,65 +121,6 @@ async def worker():
         finally:
             queue.task_done()
 
-# ---------------- LOGIN HANDLER ----------------
-@client.on(events.NewMessage(incoming=True))
-async def login_handler(event):
-
-    # only private chat (Saved Messages)
-    if not event.is_private:
-        return
-
-    if await client.is_user_authorized():
-        return
-
-    text = (event.raw_text or "").strip()
-
-    # STEP 1
-    if login_state["step"] is None:
-        login_state["step"] = "phone"
-
-        await event.reply(
-            "🔐 *Login Required*\n\nSend your phone number:\n`+1234567890`",
-            parse_mode="Markdown"
-        )
-        return
-
-    # STEP 2
-    elif login_state["step"] == "phone":
-        try:
-            result = await client.send_code_request(text)
-
-            login_state["phone"] = text
-            login_state["phone_code_hash"] = result.phone_code_hash
-            login_state["step"] = "code"
-
-            await event.reply("📩 OTP sent. Send the code.")
-        except Exception as e:
-            await event.reply(f"❌ Failed to send OTP:\n{e}")
-
-        return
-
-    # STEP 3
-    elif login_state["step"] == "code":
-        try:
-            await client.sign_in(
-                phone=login_state["phone"],
-                code=text,
-                phone_code_hash=login_state["phone_code_hash"]
-            )
-
-            login_state["step"] = None
-
-            await event.reply(
-                "✅ *Login successful!*\n\nSend media to download.",
-                parse_mode="Markdown"
-            )
-
-        except Exception as e:
-            await event.reply(f"❌ Login failed:\n{e}")
-
-        return
-
 # ---------------- DOWNLOADER ----------------
 @client.on(events.NewMessage(incoming=True))
 async def downloader(event):
@@ -187,12 +138,7 @@ async def downloader(event):
 async def main():
     cli()
 
-    await client.connect()
-
-    if not await client.is_user_authorized():
-        print("🔐 Waiting for login via Telegram...")
-    else:
-        print("✅ Already logged in")
+    await auto_login()
 
     print("✅ Downloader running...")
 
