@@ -16,7 +16,7 @@ SESSION_PATH = os.path.expanduser(
     "~/xelios-setup/services/tg-downloader/session"
 )
 
-DOWNLOAD_DIR = os.path.expanduser("~/xelios-downloads/storage/shared/download")
+DOWNLOAD_DIR = os.path.expanduser("~/storage/shared/download")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 logging.basicConfig(level=logging.INFO)
