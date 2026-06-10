@@ -110,9 +110,9 @@ async def worker():
 # ---------------- LOGIN FLOW ----------------
 @client.on(events.NewMessage(incoming=True))
 async def login_flow(event):
-
-    # ✅ Only handle login when needed
-    if login_state["step"] is None:
+    # ✅ Start login when user sends ANY message first
+    if login_state["step"] == "phone" and not login_state["phone"]:
+        await event.reply("🔐 Send your phone number (+countrycode)")
         return
 
     text = event.raw_text.strip()
@@ -172,17 +172,14 @@ async def main():
     await client.connect()
 
     if not await client.is_user_authorized():
-        print("🔐 Not logged in → switching to Telegram login mode")
-
-        me = await client.get_me()
-
-        # ✅ Send login prompt to Telegram
-        await client.send_message(
-            me.id,
-            "🔐 Login required\n\nSend your phone number (+countrycode)"
-        )
-
+    
+        print("🔐 Not logged in → waiting for Telegram login")
+    
+        # ✅ Use a known chat (Saved Messages via "me")
         login_state["step"] = "phone"
+    
+        # ✅ You must manually send first message
+        print("\n👉 Send ANY message in Telegram (Saved Messages) to start login")
 
     else:
         print("✅ Already logged in")
