@@ -1,10 +1,7 @@
-Service manager bot running...
-INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/getMe "HTTP/1.1 200 OK"
+am.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/getMe "HTTP/1.1 200 OK"
 INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/deleteWebhook "HTTP/1.1 200 OK"
 INFO:telegram.ext.Application:Application started
 INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/getUpdates "HTTP/1.1 200 OK"
-INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/sendMessage "HTTP/1.1 200 OK"
-INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/getUpdates "HTTP/1.1 200 OK"
 INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/answerCallbackQuery "HTTP/1.1 200 OK"
 INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/editMessageText "HTTP/1.1 200 OK"
 INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/getUpdates "HTTP/1.1 200 OK"
@@ -15,69 +12,65 @@ INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs
 INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/editMessageText "HTTP/1.1 200 OK"
 INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/getUpdates "HTTP/1.1 200 OK"
 INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/answerCallbackQuery "HTTP/1.1 200 OK"
-Traceback (most recent call last):
-  File "/data/data/com.termux/files/home/xelios-setup/services/tg-downloader/bot.py", line 28, in <module>
-    client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/client/telegrambaseclient.py", line 297, in __init__
-    session = SQLiteSession(str(session))
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/sessions/sqlite.py", line 48, in __init__
-    c = self._cursor()
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/sessions/sqlite.py", line 259, in _cursor
-    self._conn = sqlite3.connect(self.filename,
-                 ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
-                                 check_same_thread=False)
-                                 ^^^^^^^^^^^^^^^^^^^^^^^^
-sqlite3.OperationalError: unable to open database file
+INFO:telethon.network.mtprotosender:Connecting to 149.154.167.51:443/TcpFull...
 INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/editMessageText "HTTP/1.1 200 OK"
+INFO:telethon.network.mtprotosender:Connection to 149.154.167.51:443/TcpFull complete!
+🔐 Not logged in → send message in Telegram to start login
+INFO:telethon.network.mtprotosender:Disconnecting from 149.154.167.51:443/TcpFull...
+INFO:telethon.network.mtprotosender:Disconnection from 149.154.167.51:443/TcpFull complete!
+INFO:telethon.network.mtprotosender:Not disconnecting (already have no connection)
 Traceback (most recent call last):
-  File "/data/data/com.termux/files/home/xelios-setup/services/tg-downloader/bot.py", line 28, in <module>
-    client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/client/telegrambaseclient.py", line 297, in __init__
-    session = SQLiteSession(str(session))
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/sessions/sqlite.py", line 48, in __init__
-    c = self._cursor()
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/sessions/sqlite.py", line 259, in _cursor
-    self._conn = sqlite3.connect(self.filename,
-                 ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
-                                 check_same_thread=False)
-                                 ^^^^^^^^^^^^^^^^^^^^^^^^
-sqlite3.OperationalError: unable to open database file
+  File "/data/data/com.termux/files/home/xelios-setup/services/tg-downloader/bot.py", line 183, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/data/data/com.termux/files/home/xelios-setup/services/tg-downloader/bot.py", line 176, in main
+    await client.run_until_disconnected()
+  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/client/updates.py", line 44, in _run_until_disconnected
+    await self(functions.updates.GetStateRequest())
+  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/client/users.py", line 30, in __call__
+    return await self._call(self._sender, request, ordered=ordered)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/client/users.py", line 92, in _call
+    result = await future
+             ^^^^^^^^^^^^
+telethon.errors.rpcerrorlist.AuthKeyUnregisteredError: The key is not registered in the system (caused by GetStateRequest)
+INFO:telethon.network.mtprotosender:Connecting to 149.154.167.51:443/TcpFull...
+INFO:telethon.network.mtprotosender:Connection to 149.154.167.51:443/TcpFull complete!
+🔐 Not logged in → send message in Telegram to start login
+INFO:telethon.network.mtprotosender:Disconnecting from 149.154.167.51:443/TcpFull...
+INFO:telethon.network.mtprotosender:Disconnection from 149.154.167.51:443/TcpFull complete!
+INFO:telethon.network.mtprotosender:Not disconnecting (already have no connection)
 Traceback (most recent call last):
-  File "/data/data/com.termux/files/home/xelios-setup/services/tg-downloader/bot.py", line 28, in <module>
-    client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/client/telegrambaseclient.py", line 297, in __init__
-    session = SQLiteSession(str(session))
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/sessions/sqlite.py", line 48, in __init__
-    c = self._cursor()
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/sessions/sqlite.py", line 259, in _cursor
-    self._conn = sqlite3.connect(self.filename,
-                 ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
-                                 check_same_thread=False)
-                                 ^^^^^^^^^^^^^^^^^^^^^^^^
-sqlite3.OperationalError: unable to open database file
-Traceback (most recent call last):
-  File "/data/data/com.termux/files/home/xelios-setup/services/tg-downloader/bot.py", line 28, in <module>
-    client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/client/telegrambaseclient.py", line 297, in __init__
-    session = SQLiteSession(str(session))
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/sessions/sqlite.py", line 48, in __init__
-    c = self._cursor()
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/sessions/sqlite.py", line 259, in _cursor
-    self._conn = sqlite3.connect(self.filename,
-                 ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
-                                 check_same_thread=False)
-                                 ^^^^^^^^^^^^^^^^^^^^^^^^
-sqlite3.OperationalError: unable to open database file
-Traceback (most recent call last):
-  File "/data/data/com.termux/files/home/xelios-setup/services/tg-downloader/bot.py", line 28, in <module>
-    client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/client/telegrambaseclient.py", line 297, in __init__
-    session = SQLiteSession(str(session))
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/sessions/sqlite.py", line 48, in __init__
-    c = self._cursor()
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/sessions/sqlite.py", line 259, in _cursor
-    self._conn = sqlite3.connect(self.filename,
-                 ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
-                                 check_same_thread=False)
-                                 ^^^^^^^^^^^^^^^^^^^^^^^^
-sqlite3.OperationalError: unable to open database file
+  File "/data/data/com.termux/files/home/xelios-setup/services/tg-downloader/bot.py", line 183, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/data/data/com.termux/files/home/xelios-setup/services/tg-downloader/bot.py", line 176, in main
+    await client.run_until_disconnected()
+  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/client/updates.py", line 44, in _run_until_disconnected
+    await self(functions.updates.GetStateRequest())
+  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/client/users.py", line 30, in __call__
+    return await self._call(self._sender, request, ordered=ordered)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/client/users.py", line 92, in _call
+    result = await future
+             ^^^^^^^^^^^^
+telethon.errors.rpcerrorlist.AuthKeyUnregisteredError: The key is not registered in the system (caused by GetStateRequest)
+INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_
