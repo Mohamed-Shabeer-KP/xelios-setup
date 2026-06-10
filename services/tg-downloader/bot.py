@@ -30,7 +30,6 @@ client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
 # ---------------- STATE ----------------
 queue = asyncio.Queue()
 
-current = {"msg": None}
 login_state = {
     "step": None,
     "phone": None,
@@ -52,7 +51,7 @@ def cli():
         if os.path.exists(PAUSE_FILE):
             os.remove(PAUSE_FILE)
         sys.exit(0)
-    
+
     elif cmd == "status":
         async def check():
             await client.connect()
@@ -61,28 +60,26 @@ def cli():
             else:
                 print("NOT_LOGGED_IN")
             await client.disconnect()
-    
+
         asyncio.run(check())
         sys.exit(0)
 
-
-# ---------------- UI ----------------
+# ---------------- PROGRESS BAR ----------------
 def bar(p):
     return "█" * (p // 10) + "░" * (10 - p // 10)
 
-async def progress_cb(current_bytes, total):
+async def progress_cb(msg, current, total):
     if total == 0:
         return
 
-    p = int(current_bytes * 100 / total)
+    pct = int(current * 100 / total)
 
-    if current["msg"]:
-        try:
-            await current["msg"].edit(
-                f"⬇️ Downloading...\n[{bar(p)}] {p}%"
-            )
-        except:
-            pass
+    try:
+        await msg.edit(
+            f"⬇️ Downloading...\n[{bar(pct)}] {pct}%"
+        )
+    except:
+        pass
 
 # ---------------- WORKER ----------------
 async def worker():
@@ -91,50 +88,70 @@ async def worker():
 
         try:
             ui = await event.reply("⬇️ Starting download...")
-            current["msg"] = ui
+
+            # pause support
+            while os.path.exists(PAUSE_FILE):
+                await asyncio.sleep(1)
 
             path = await event.message.download_media(
                 file=DOWNLOAD_DIR,
-                progress_callback=progress_cb
+                progress_callback=lambda c, t: asyncio.create_task(
+                    progress_cb(ui, c, t)
+                )
             )
 
             await ui.edit(f"✅ Downloaded\n📁 {path}")
 
         except Exception as e:
-            if current["msg"]:
-                await current["msg"].edit(f"❌ Failed: {e}")
+            try:
+                await ui.edit(f"❌ Failed: {e}")
+            except:
+                pass
 
         finally:
-            current["msg"] = None
             queue.task_done()
 
-# ---------------- LOGIN FLOW ----------------
+# ---------------- LOGIN HANDLER ----------------
 @client.on(events.NewMessage(incoming=True))
-async def login_flow(event):
+async def login_handler(event):
 
-    if not await client.is_user_authorized():
+    # only private chat (Saved Messages)
+    if not event.is_private:
+        return
 
-        text = event.raw_text.strip() if event.raw_text else ""
+    if await client.is_user_authorized():
+        return
 
-        if login_state["step"] is None:
-            login_state["step"] = "phone"
-            await event.reply(
-                "🔐 Login Required\n\nSend your phone number (+countrycode)"
-            )
-            return
+    text = (event.raw_text or "").strip()
 
-        elif login_state["step"] == "phone":
-            login_state["phone"] = text
+    # STEP 1
+    if login_state["step"] is None:
+        login_state["step"] = "phone"
 
+        await event.reply(
+            "🔐 *Login Required*\n\nSend your phone number:\n`+1234567890`",
+            parse_mode="Markdown"
+        )
+        return
+
+    # STEP 2
+    elif login_state["step"] == "phone":
+        try:
             result = await client.send_code_request(text)
 
+            login_state["phone"] = text
             login_state["phone_code_hash"] = result.phone_code_hash
             login_state["step"] = "code"
 
-            await event.reply("📩 OTP sent. Send code")
-            return
+            await event.reply("📩 OTP sent. Send the code.")
+        except Exception as e:
+            await event.reply(f"❌ Failed to send OTP:\n{e}")
 
-        elif login_state["step"] == "code":
+        return
+
+    # STEP 3
+    elif login_state["step"] == "code":
+        try:
             await client.sign_in(
                 phone=login_state["phone"],
                 code=text,
@@ -143,20 +160,21 @@ async def login_flow(event):
 
             login_state["step"] = None
 
-            await event.reply("✅ Login successful!")
-            return
+            await event.reply(
+                "✅ *Login successful!*\n\nSend media to download.",
+                parse_mode="Markdown"
+            )
 
+        except Exception as e:
+            await event.reply(f"❌ Login failed:\n{e}")
 
-@client.on(events.NewMessage(incoming=True))
-async def login_flow(event):
-    print("📨 MESSAGE RECEIVED")
+        return
 
-
-# ---------------- DOWNLOAD ----------------
+# ---------------- DOWNLOADER ----------------
 @client.on(events.NewMessage(incoming=True))
 async def downloader(event):
 
-    if login_state["step"] is not None:
+    if not await client.is_user_authorized():
         return
 
     if not event.message.media:
@@ -172,15 +190,9 @@ async def main():
     await client.connect()
 
     if not await client.is_user_authorized():
-        print("🔐 Not logged in")
-        print("👉 Open Telegram and send a message to yourself to start login")
-
-        # ✅ WAIT FOREVER instead of crashing
-        while True:
-            await asyncio.sleep(5)
-
+        print("🔐 Waiting for login via Telegram...")
     else:
-        print("✅ Logged in")
+        print("✅ Already logged in")
 
     print("✅ Downloader running...")
 
@@ -188,7 +200,6 @@ async def main():
 
     try:
         await client.run_until_disconnected()
-
     finally:
         worker_task.cancel()
         await client.disconnect()
