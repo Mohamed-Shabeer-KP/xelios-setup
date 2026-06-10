@@ -7,18 +7,27 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
-    ContextTypes
+    ContextTypes, MessageHandler, filters
 )
+
+from telethon import TelegramClient
 
 # ---------------- CONFIG ----------------
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 SERVICES_DIR = os.path.expanduser("~/xelios-setup/services")
 
-LOGIN_FILE = os.path.expanduser(
-    "~/xelios-setup/services/tg-downloader/tg_login_code"
+API_ID = 30299030
+API_HASH = os.getenv("TELEGRAM_API_HASH")
+
+SESSION_PATH = os.path.expanduser(
+    "~/xelios-setup/services/tg-downloader/session"
 )
 
 logging.basicConfig(level=logging.INFO)
+
+# Telethon login client
+login_client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
+login_state = {}
 
 # ---------------- HELPERS ----------------
 def service_path(name):
@@ -79,35 +88,72 @@ async def render_main_menu(query):
 # ---------------- COMMANDS ----------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🤖 *Xelios Service Manager*",
+        "🤖 *Xelios Service Manager*\n\nUse /login to authenticate Telegram.",
         reply_markup=main_menu(),
         parse_mode="Markdown"
     )
 
-# ✅ OTP COMMAND
-async def otp(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("Usage: /otp 12345")
+# ✅ LOGIN COMMAND
+async def login(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    login_state[user_id] = {"step": "phone"}
+
+    await update.message.reply_text(
+        "🔐 Send your phone number (+1234567890)"
+    )
+
+# ✅ LOGIN FLOW
+async def login_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+
+    if user_id not in login_state:
         return
 
-    code = context.args[0]
+    text = update.message.text.strip()
+    state = login_state[user_id]
 
-    try:
-        print("💾 Writing OTP to:", LOGIN_FILE)
+    # PHONE STEP
+    if state["step"] == "phone":
+        await login_client.connect()
 
-        os.makedirs(os.path.dirname(LOGIN_FILE), exist_ok=True)
+        result = await login_client.send_code_request(text)
 
-        if os.path.isdir(LOGIN_FILE):
-            import shutil
-            shutil.rmtree(LOGIN_FILE)
+        state["phone"] = text
+        state["phone_code_hash"] = result.phone_code_hash
+        state["step"] = "code"
 
-        with open(LOGIN_FILE, "w") as f:
-            f.write(code)
+        await update.message.reply_text("📩 OTP sent. Send the code.")
 
-        await update.message.reply_text("✅ OTP sent to downloader")
+    # OTP STEP
+    elif state["step"] == "code":
+        try:
+            await login_client.sign_in(
+                phone=state["phone"],
+                code=text,
+                phone_code_hash=state["phone_code_hash"]
+            )
 
-    except Exception as e:
-        await update.message.reply_text(f"❌ Failed: {e}")
+            await update.message.reply_text("✅ Login successful!")
+
+            login_state.pop(user_id)
+
+        except Exception as e:
+            if "PASSWORD" in str(e).upper():
+                state["step"] = "password"
+                await update.message.reply_text("🔐 Enter your 2FA password")
+            else:
+                await update.message.reply_text(f"❌ Failed: {e}")
+
+    # 2FA PASSWORD
+    elif state["step"] == "password":
+        try:
+            await login_client.sign_in(password=text)
+
+            await update.message.reply_text("✅ Login successful!")
+            login_state.pop(user_id)
+
+        except Exception as e:
+            await update.message.reply_text(f"❌ Failed: {e}")
 
 # ---------------- ROUTER ----------------
 async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -166,14 +212,11 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ---------------- MAIN ----------------
 def main():
-    if not BOT_TOKEN:
-        print("❌ TELEGRAM_BOT_TOKEN not set")
-        return
-
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("otp", otp))
+    app.add_handler(CommandHandler("login", login))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, login_flow))
     app.add_handler(CallbackQueryHandler(router))
 
     print("🤖 Service manager bot running...")
