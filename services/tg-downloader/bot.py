@@ -4,9 +4,11 @@ import os
 import sys
 import asyncio
 import logging
-import signal
+import warnings
 
 from telethon import TelegramClient, events
+
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 # ---------------- CONFIG ----------------
 API_ID = 30299030
@@ -20,25 +22,28 @@ DOWNLOAD_DIR = os.path.expanduser("~/xelios-downloads")
 
 PAUSE_FILE = "/tmp/tg_downloader_pause"
 
-# ✅ Fix for Termux / Python 3.13 stability
-asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 logging.basicConfig(level=logging.INFO)
 
 client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
 
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
 # ---------------- STATE ----------------
 download_queue = asyncio.Queue()
 
 current_download = {
-    "name": None,
-    "progress": 0
+    "event": None,
+    "progress": 0,
+    "msg": None
 }
 
+# ---------------- PROGRESS BAR ----------------
+def build_progress_bar(percent):
+    filled = int(percent / 10)
+    bar = "█" * filled + "░" * (10 - filled)
+    return f"[{bar}] {percent}%"
 
-# ✅ CLI COMMANDS (pause/resume/status/queue)
+# ---------------- CLI COMMANDS ----------------
 def handle_cli_commands():
     if len(sys.argv) < 2:
         return
@@ -47,28 +52,27 @@ def handle_cli_commands():
 
     if cmd == "pause":
         open(PAUSE_FILE, "w").close()
-        print("⏸️ Paused downloads")
+        print("⏸️ Paused")
         sys.exit(0)
 
     elif cmd == "resume":
         if os.path.exists(PAUSE_FILE):
             os.remove(PAUSE_FILE)
-        print("▶️ Resumed downloads")
+        print("▶️ Resumed")
         sys.exit(0)
 
     elif cmd == "status":
-        if current_download["name"]:
-            print(f"Downloading: {current_download['progress']}%")
+        if current_download["event"]:
+            print(f"{current_download['progress']}%")
         else:
-            print("No active download")
+            print("idle")
         sys.exit(0)
 
     elif cmd == "queue":
-        print(f"Queue size: {download_queue.qsize()}")
+        print(download_queue.qsize())
         sys.exit(0)
 
-
-# ---------------- PROGRESS ----------------
+# ---------------- PROGRESS CALLBACK ----------------
 async def progress_callback(current, total):
     if total == 0:
         return
@@ -76,13 +80,20 @@ async def progress_callback(current, total):
     percent = int(current * 100 / total)
     current_download["progress"] = percent
 
-    print(f"⬇️ Progress: {percent}%", end="\r")
+    bar = build_progress_bar(percent)
 
-    # ✅ Pause handling
+    # ✅ Update Telegram UI message
+    if current_download["msg"]:
+        try:
+            await current_download["msg"].edit(
+                f"⬇️ Downloading...\n{bar}"
+            )
+        except:
+            pass
+
+    # ✅ Pause logic
     while os.path.exists(PAUSE_FILE):
-        print("\n⏸️ Paused...")
         await asyncio.sleep(2)
-
 
 # ---------------- WORKER ----------------
 async def worker():
@@ -91,43 +102,70 @@ async def worker():
 
         try:
             message = event.message
-
-            current_download["name"] = f"{message.id}"
+            current_download["event"] = event
             current_download["progress"] = 0
 
-            logging.info("⬇️ Starting download...")
+            # ✅ Create UI message
+            ui_msg = await event.reply("⬇️ Starting download...")
+            current_download["msg"] = ui_msg
 
             file_path = await message.download_media(
                 file=DOWNLOAD_DIR,
                 progress_callback=progress_callback
             )
 
-            logging.info(f"\n✅ Downloaded: {file_path}")
+            await ui_msg.edit(f"✅ Downloaded\n📁 {file_path}")
 
         except Exception as e:
             logging.error(f"\n❌ Failed: {e}")
+            if current_download["msg"]:
+                await current_download["msg"].edit(f"❌ Failed: {e}")
 
         finally:
-            current_download["name"] = None
+            current_download["event"] = None
             current_download["progress"] = 0
+            current_download["msg"] = None
 
             download_queue.task_done()
 
+# ---------------- EVENT HANDLER ----------------
+@client.on(events.NewMessage(pattern=r"^/(pause|resume|status|queue)$"))
+async def control_handler(event):
 
-# ---------------- EVENT LISTENER ----------------
+    cmd = event.pattern_match.group(1)
+
+    if cmd == "pause":
+        open(PAUSE_FILE, "w").close()
+        await event.reply("⏸️ Paused")
+
+    elif cmd == "resume":
+        if os.path.exists(PAUSE_FILE):
+            os.remove(PAUSE_FILE)
+        await event.reply("▶️ Resumed")
+
+    elif cmd == "status":
+        if current_download["event"]:
+            await event.reply(
+                f"⬇️ {build_progress_bar(current_download['progress'])}"
+            )
+        else:
+            await event.reply("✅ No active download")
+
+    elif cmd == "queue":
+        await event.reply(f"📦 Queue size: {download_queue.qsize()}")
+
+# ✅ Capture media
 @client.on(events.NewMessage)
 async def handler(event):
 
     message = event.message
 
-    # ✅ Only download media
     if not message.media:
         return
 
-    logging.info("📥 Added to queue")
+    await event.reply("📥 Added to queue")
 
     await download_queue.put(event)
-
 
 # ---------------- MAIN ----------------
 async def main():
@@ -139,31 +177,33 @@ async def main():
         print("❌ Not logged in")
         return
 
-    print("✅ Downloader service running...")
+    print("✅ Downloader running...")
 
-    # ✅ Start worker
     worker_task = asyncio.create_task(worker())
 
-    # ✅ Graceful shutdown (FIXES YOUR ERROR)
-    stop_event = asyncio.Event()
+    try:
+        await client.run_until_disconnected()
 
-    def shutdown_handler(*args):
-        print("\n🛑 Shutting down...")
-        stop_event.set()
+    except asyncio.CancelledError:
+        print("\n🛑 Stopped")
 
-    signal.signal(signal.SIGINT, shutdown_handler)
-    signal.signal(signal.SIGTERM, shutdown_handler)
+    finally:
+        print("🧹 Cleaning up...")
 
-    # ✅ Wait until stop signal
-    await stop_event.wait()
+        worker_task.cancel()
+        try:
+            await worker_task
+        except:
+            pass
 
-    # ✅ Cleanup
-    worker_task.cancel()
+        try:
+            await client.disconnect()
+        except:
+            pass
 
-    await client.disconnect()
+        await asyncio.sleep(0.5)
 
-    print("✅ Shutdown complete")
-
+        print("✅ Shutdown complete")
 
 if __name__ == "__main__":
     asyncio.run(main())
