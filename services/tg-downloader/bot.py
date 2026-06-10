@@ -52,6 +52,19 @@ def cli():
         if os.path.exists(PAUSE_FILE):
             os.remove(PAUSE_FILE)
         sys.exit(0)
+    
+    elif cmd == "status":
+        async def check():
+            await client.connect()
+            if await client.is_user_authorized():
+                print("LOGGED_IN")
+            else:
+                print("NOT_LOGGED_IN")
+            await client.disconnect()
+    
+        asyncio.run(check())
+        sys.exit(0)
+
 
 # ---------------- UI ----------------
 def bar(p):
