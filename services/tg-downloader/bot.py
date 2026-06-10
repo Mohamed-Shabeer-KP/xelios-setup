@@ -146,6 +146,12 @@ async def login_flow(event):
             await event.reply("✅ Login successful!")
             return
 
+
+@client.on(events.NewMessage(incoming=True))
+async def login_flow(event):
+    print("📨 MESSAGE RECEIVED")
+
+
 # ---------------- DOWNLOAD ----------------
 @client.on(events.NewMessage(incoming=True))
 async def downloader(event):
