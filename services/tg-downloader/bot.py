@@ -110,16 +110,24 @@ async def worker():
 # ---------------- LOGIN FLOW ----------------
 @client.on(events.NewMessage(incoming=True))
 async def login_flow(event):
-    # ✅ Start login when user sends ANY message first
-    if login_state["step"] == "phone" and not login_state["phone"]:
-        await event.reply("🔐 Send your phone number (+countrycode)")
-        return
 
-    text = event.raw_text.strip()
-    if not text:
-        return
+    text = event.raw_text.strip() if event.raw_text else ""
 
-    # PHONE STEP
+    # ✅ If NOT logged in → trigger login UI
+    if not await client.is_user_authorized():
+
+        # ✅ First interaction
+        if login_state["step"] is None:
+            login_state["step"] = "phone"
+            await event.reply(
+                "🔐 *Login Required*\n\n"
+                "Send your phone number with country code.\n"
+                "Example: +919876543210",
+                parse_mode="Markdown"
+            )
+            return
+
+    # ✅ PHONE STEP
     if login_state["step"] == "phone":
         login_state["phone"] = text
 
@@ -134,8 +142,10 @@ async def login_flow(event):
         except Exception as e:
             await event.reply(f"❌ {e}")
 
-    # OTP STEP
-    elif login_state["step"] == "code":
+        return
+
+    # ✅ OTP STEP
+    if login_state["step"] == "code":
         try:
             await client.sign_in(
                 phone=login_state["phone"],
@@ -145,10 +155,12 @@ async def login_flow(event):
 
             login_state["step"] = None
 
-            await event.reply("✅ Login successful!")
+            await event.reply("✅ Login successful! Downloader is ready.")
 
         except Exception as e:
             await event.reply(f"❌ {e}")
+
+        return
 
 # ---------------- DOWNLOAD HANDLER ----------------
 @client.on(events.NewMessage(incoming=True))
