@@ -112,8 +112,14 @@ async def process_download(task_id):
     task = downloads[task_id]
     event = task["event"]
 
+    progress_msg = await event.reply(f"⬇️ Starting: {task['name']}")
+
+    last_update = 0
+
     try:
         async def progress(current, total):
+            nonlocal last_update
+
             if task["cancelled"]:
                 raise Exception("Cancelled")
 
@@ -123,6 +129,20 @@ async def process_download(task_id):
             pct = int(current * 100 / total)
             task["progress"] = pct
 
+            # ✅ reduce spam (update every 5%)
+            if pct - last_update < 5:
+                return
+            last_update = pct
+
+            bar = "█" * (pct // 10) + "░" * (10 - pct // 10)
+
+            try:
+                await progress_msg.edit(
+                    f"⬇️ {task['name']}\n[{bar}] {pct}%"
+                )
+            except:
+                pass  # ignore edit errors
+
         path = await event.message.download_media(
             file=DOWNLOAD_DIR,
             progress_callback=lambda c, t: asyncio.create_task(progress(c, t))
@@ -130,11 +150,13 @@ async def process_download(task_id):
 
         task["status"] = "done"
 
-        await event.reply(f"✅ Done: {task['name']}\n📁 {path}")
+        await progress_msg.edit(
+            f"✅ Done: {task['name']}\n📁 {path}"
+        )
 
     except Exception as e:
         task["status"] = "failed"
-        await event.reply(f"❌ Failed: {task['name']} → {e}")
+        await progress_msg.edit(f"❌ Failed: {task['name']} → {e}")
 
 # ---------------- QUEUE ----------------
 @client.on(events.NewMessage(pattern=r'^/queue'))
