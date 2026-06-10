@@ -1,3 +1,4 @@
+Service manager bot running...
 INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/getMe "HTTP/1.1 200 OK"
 INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/deleteWebhook "HTTP/1.1 200 OK"
 INFO:telegram.ext.Application:Application started
@@ -80,20 +81,3 @@ Traceback (most recent call last):
                                  check_same_thread=False)
                                  ^^^^^^^^^^^^^^^^^^^^^^^^
 sqlite3.OperationalError: unable to open database file
-Traceback (most recent call last):
-  File "/data/data/com.termux/files/home/xelios-setup/services/tg-downloader/bot.py", line 28, in <module>
-    client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/client/telegrambaseclient.py", line 297, in __init__
-    session = SQLiteSession(str(session))
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/sessions/sqlite.py", line 48, in __init__
-    c = self._cursor()
-  File "/data/data/com.termux/files/usr/lib/python3.13/site-packages/telethon/sessions/sqlite.py", line 259, in _cursor
-    self._conn = sqlite3.connect(self.filename,
-                 ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
-                                 check_same_thread=False)
-                                 ^^^^^^^^^^^^^^^^^^^^^^^^
-sqlite3.OperationalError: unable to open database file
-^C
-~/xelios-setup $ INFO:httpx:HTTP Request: POST https://api.telegram.org/bot8771219235:AAFQa43Fqfs8sjEbZCdnx_Pskd6oRGouA_c/getUpdates "HTTP/1.1 200 OK"
-INFO:telegram.ext.Application:Application is stopping. This might take a moment.
-INFO:telegram.ext.Application:Application.stop() complete
