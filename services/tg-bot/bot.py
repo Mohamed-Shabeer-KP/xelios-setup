@@ -13,7 +13,7 @@ from telegram.ext import (
 # ---------------- CONFIG ----------------
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 SERVICES_DIR = os.path.expanduser("~/xelios-setup/services")
-LOGIN_FILE = "~/xelios-setup/services/tg-downloader/tg_login_code"
+LOGIN_FILE = "/temp/tg_login_code"
 
 logging.basicConfig(level=logging.INFO)
 
