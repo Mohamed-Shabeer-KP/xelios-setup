@@ -59,7 +59,14 @@ async def auto_login():
     print("🔐 Starting fresh login session...")
 
     # ✅ ALWAYS request OTP only ONCE
+    print("📡 Requesting OTP...")
+    
     result = await client.send_code_request(PHONE_NUMBER)
+    
+    print("✅ API response received")
+    print("👉 phone_code_hash:", result.phone_code_hash)
+    print("👉 type:", type(result))
+    print("👉 full result:", result)
     phone_code_hash = result.phone_code_hash
 
     print("📩 OTP sent")
