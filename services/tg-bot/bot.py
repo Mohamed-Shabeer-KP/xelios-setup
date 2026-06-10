@@ -13,24 +13,21 @@ from telegram.ext import (
 # ---------------- CONFIG ----------------
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 SERVICES_DIR = os.path.expanduser("~/xelios-setup/services")
+LOGIN_FILE = "/tmp/tg_login_code"
 
 logging.basicConfig(level=logging.INFO)
-
 
 # ---------------- HELPERS ----------------
 def service_path(name):
     return os.path.join(SERVICES_DIR, name)
 
-
 def list_services():
     if not os.path.isdir(SERVICES_DIR):
         return []
-
     return [
         s for s in sorted(os.listdir(SERVICES_DIR))
         if os.path.isdir(service_path(s))
     ]
-
 
 def is_running(name):
     try:
@@ -39,10 +36,9 @@ def is_running(name):
             capture_output=True,
             text=True
         )
-        return result.stdout.startswith("run:")
+        return "run:" in result.stdout.lower()
     except:
         return False
-
 
 def start_service(name):
     path = service_path(name)
@@ -50,13 +46,11 @@ def start_service(name):
     subprocess.run(["sv", "up", path])
     return f"🟢 {name} started"
 
-
 def stop_service(name):
     path = service_path(name)
     subprocess.run(["sv", "down", path])
     subprocess.run(["touch", f"{path}/down"])
     return f"🔴 {name} stopped"
-
 
 def service_status_text():
     text = "📊 *Service Status*\n\n"
@@ -65,14 +59,12 @@ def service_status_text():
         text += f"{icon} {s}\n"
     return text
 
-
 # ---------------- UI ----------------
 def main_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 Status", callback_data="status")],
         [InlineKeyboardButton("🔧 Services", callback_data="services")]
     ])
-
 
 async def render_main_menu(query):
     await query.edit_message_text(
@@ -81,8 +73,7 @@ async def render_main_menu(query):
         parse_mode="Markdown"
     )
 
-
-# ---------------- COMMAND ----------------
+# ---------------- COMMANDS ----------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🤖 *Xelios Service Manager*",
@@ -90,6 +81,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
+# ✅ OTP COMMAND (NEW)
+async def otp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("Usage: /otp 12345")
+        return
+
+    code = context.args[0]
+
+    with open(LOGIN_FILE, "w") as f:
+        f.write(code)
+
+    await update.message.reply_text("✅ OTP sent to downloader")
 
 # ---------------- ROUTER ----------------
 async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -140,38 +143,12 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("start:"):
         name = data.split(":")[1]
-    
         msg = start_service(name)
-    
-        # ✅ If starting downloader → check login status
-        if name == "tg-downloader":
-            try:
-                result = subprocess.run(
-                    ["python3", "~/xelios-setup/services/tg-downloader/bot.py", "status"],
-                    capture_output=True,
-                    text=True
-                )
-    
-                status = result.stdout.strip()
-    
-                if status == "NOT_LOGGED_IN":
-                    msg += (
-                        "\n\n🔐 *Login Required*\n"
-                        "1️⃣ Open Telegram\n"
-                        "2️⃣ Go to Saved Messages\n"
-                        "3️⃣ Send any message (like 'hi')\n"
-                        "4️⃣ Follow login steps"
-                    )
-    
-            except Exception as e:
-                msg += f"\n⚠️ Could not check login status: {e}"
-    
         await query.edit_message_text(msg, reply_markup=main_menu(), parse_mode="Markdown")
 
     elif data.startswith("stop:"):
         msg = stop_service(data.split(":")[1])
         await query.edit_message_text(msg, reply_markup=main_menu())
-
 
 # ---------------- MAIN ----------------
 def main():
@@ -182,11 +159,11 @@ def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("otp", otp))  # ✅ added
     app.add_handler(CallbackQueryHandler(router))
 
     print("🤖 Service manager bot running...")
     app.run_polling()
-
 
 if __name__ == "__main__":
     main()
