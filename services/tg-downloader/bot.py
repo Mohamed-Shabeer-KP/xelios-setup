@@ -15,7 +15,7 @@ API_ID = 30299030
 API_HASH = os.getenv("TELEGRAM_API_HASH")
 
 SESSION_PATH = os.path.expanduser(
-    "~/xelios-setup/services/telegram-session/downloader"
+    "~/xelios-setup/services/tg-downloader/session"
 )
 
 DOWNLOAD_DIR = os.path.expanduser("~/xelios-downloads")
