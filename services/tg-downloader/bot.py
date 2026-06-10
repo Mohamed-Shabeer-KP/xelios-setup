@@ -166,9 +166,17 @@ async def main():
     await client.connect()
 
     if not await client.is_user_authorized():
-        print("🔐 Not logged in → send message in Telegram to start login")
+        print("🔐 Not logged in")
+        print("👉 Open Telegram and send a message to yourself to start login")
+
+        # ✅ WAIT FOREVER instead of crashing
+        while True:
+            await asyncio.sleep(5)
+
     else:
         print("✅ Logged in")
+
+    print("✅ Downloader running...")
 
     worker_task = asyncio.create_task(worker())
 
