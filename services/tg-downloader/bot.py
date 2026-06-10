@@ -80,7 +80,7 @@ async def handle_download(event):
 
     msg = await event.reply(
         f"📥 *Queued:* {file_name}",
-        buttons=[[Button.inline("▶ Start", f"start:{task_id}")]],
+        buttons=[[Button.inline("▶ Start", f"start:{task_id}".encode())]],
         parse_mode="Markdown"
     )
 
