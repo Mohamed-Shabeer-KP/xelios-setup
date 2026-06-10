@@ -20,7 +20,7 @@ SESSION_PATH = os.path.expanduser(
 DOWNLOAD_DIR = os.path.expanduser("~/xelios-downloads")
 
 PAUSE_FILE = "/tmp/tg_downloader_pause"
-LOGIN_FILE = "~/xelios-setup/services/tg-downloader/tg_login_code"
+LOGIN_FILE = "~/xelios-setup/services/tg-bot/tg_login_code"
 
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
