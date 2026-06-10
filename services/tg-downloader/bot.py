@@ -9,6 +9,7 @@ from telethon import TelegramClient, events, Button
 # ---------------- CONFIG ----------------
 API_ID = 30299030
 API_HASH = os.getenv("TELEGRAM_API_HASH")
+TARGET_GROUP_NAME = "Downloader"
 
 SESSION_PATH = os.path.expanduser(
     "~/xelios-setup/services/tg-downloader/session"
@@ -38,12 +39,38 @@ async def start_handler(event):
     )
 
 # ---------------- NEW MEDIA ----------------
-@client.on(events.NewMessage(incoming=True))
+@client.on(events.NewMessage)
 async def downloader(event):
-    global counter
+    try:
+        # ✅ Ensure it's a group
+        if not event.is_group:
+            return
 
-    if not event.message.media:
-        return
+        # ✅ Get group title safely
+        chat = await event.get_chat()
+
+        if not hasattr(chat, "title"):
+            return
+
+        # ✅ Filter only your group
+        if chat.title != TARGET_GROUP_NAME:
+            return
+
+        # ✅ Only process messages with media
+        if not event.message.media:
+            return
+
+        # ✅ DEBUG (optional — remove later)
+        print(f"✅ Download triggered from group: {chat.title}")
+
+        # ✅ Continue with your existing logic below
+        await handle_download(event)
+
+    except Exception as e:
+        print("❌ Handler error:", e)
+
+async def handle_download(event):
+    global counter
 
     async with lock:
         counter += 1
@@ -53,7 +80,7 @@ async def downloader(event):
 
     msg = await event.reply(
         f"📥 *Queued:* {file_name}",
-        buttons=[[Button.inline("▶ Start", f"start:{task_id}".encode())]],
+        buttons=[[Button.inline("▶ Start", f"start:{task_id}")]],
         parse_mode="Markdown"
     )
 
