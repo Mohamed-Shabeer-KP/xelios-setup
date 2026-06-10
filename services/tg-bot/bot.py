@@ -13,7 +13,10 @@ from telegram.ext import (
 # ---------------- CONFIG ----------------
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 SERVICES_DIR = os.path.expanduser("~/xelios-setup/services")
-LOGIN_FILE = os.path.expanduser("~/xelios-setup/services/tg-downloader/tg_login_code")
+
+LOGIN_FILE = os.path.expanduser(
+    "~/xelios-setup/services/tg-downloader/tg_login_code"
+)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -81,7 +84,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
-# ✅ OTP COMMAND (NEW)
+# ✅ OTP COMMAND
 async def otp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("Usage: /otp 12345")
@@ -154,8 +157,7 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif data.startswith("start:"):
-        name = data.split(":")[1]
-        msg = start_service(name)
+        msg = start_service(data.split(":")[1])
         await query.edit_message_text(msg, reply_markup=main_menu(), parse_mode="Markdown")
 
     elif data.startswith("stop:"):
@@ -171,7 +173,7 @@ def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("otp", otp))  # ✅ added
+    app.add_handler(CommandHandler("otp", otp))
     app.add_handler(CallbackQueryHandler(router))
 
     print("🤖 Service manager bot running...")
