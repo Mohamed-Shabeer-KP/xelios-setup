@@ -28,6 +28,22 @@ logging.basicConfig(level=logging.INFO)
 login_client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
 login_state = {}
 
+async def get_login_status():
+    client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
+
+    await client.connect()
+
+    try:
+        if await client.is_user_authorized():
+            status = "✅ Logged In"
+        else:
+            status = "❌ Not Logged In"
+    except Exception:
+        status = "❌ Not Logged In"
+
+    await client.disconnect()
+    return status
+    
 # ---------------- HELPERS ----------------
 def service_path(name):
     return os.path.join(SERVICES_DIR, name)
@@ -86,8 +102,11 @@ async def render_main_menu(query):
 
 # ---------------- COMMANDS ----------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    status = await get_login_status()
+
     await update.message.reply_text(
-        "🤖 *Xelios Service Manager*\n\nUse /login to authenticate.",
+        f"🤖 *Xelios Service Manager*\n\n"
+        f"🔐 *Login Status:* {status}",
         reply_markup=main_menu(),
         parse_mode="Markdown"
     )
