@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
-import sys
 import os
-import re
 import asyncio
+import logging
 
-from telethon import TelegramClient
+from telethon import TelegramClient, events
 
 API_ID = 30299030
 API_HASH = os.getenv("TELEGRAM_API_HASH", "")
@@ -14,53 +13,50 @@ SESSION_PATH = os.path.expanduser(
     "~/xelios-setup/services/telegram-session/session"
 )
 
+DOWNLOAD_DIR = os.path.expanduser("~/xelios-downloads")
 
-# ✅ Parse Telegram link
-def parse_tg_link(link):
-    match = re.search(r"t\.me/([^/]+)/(\d+)", link)
-    if not match:
-        return None, None
-    return match.group(1), int(match.group(2))
+logging.basicConfig(level=logging.INFO)
+
+client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
 
 
-async def main(link):
-    client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
-    await client.connect()
+# ✅ Ensure download directory exists
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-    if not await client.is_user_authorized():
-        print("NOT_LOGGED_IN", file=sys.stderr)
-        return 1
 
-    chat, msg_id = parse_tg_link(link)
+# ✅ EVENT: new message
+@client.on(events.NewMessage)
+async def handler(event):
 
-    if not chat:
-        print("INVALID_LINK", file=sys.stderr)
-        return 1
+    message = event.message
+
+    # ✅ Ignore if no media
+    if not message.media:
+        return
 
     try:
-        message = await client.get_messages(chat, ids=msg_id)
+        logging.info("⬇️ Downloading media...")
 
-        if not message or not message.media:
-            print("NO_MEDIA", file=sys.stderr)
-            return 1
+        file_path = await message.download_media(file=DOWNLOAD_DIR)
 
-        file_path = await message.download_media()
-
-        print(file_path)  # ✅ return to bot
-
-        return 0
+        logging.info(f"✅ Downloaded: {file_path}")
 
     except Exception as e:
-        print(str(e), file=sys.stderr)
-        return 1
+        logging.error(f"❌ Failed: {e}")
+
+
+async def main():
+    await client.start()
+
+    if not await client.is_user_authorized():
+        print("❌ Not logged in. Run bot login first.")
+        return
+
+    print("✅ Downloader service running...")
+
+    # ✅ Run forever (no polling loop needed)
+    await client.run_until_disconnected()
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("NO_LINK_PROVIDED", file=sys.stderr)
-        sys.exit(1)
-
-    link = sys.argv[1]
-
-    exit_code = asyncio.run(main(link))
-    sys.exit(exit_code)
+    asyncio.run(main())
