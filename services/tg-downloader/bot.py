@@ -1,8 +1,4 @@
-#!/usr/bin/env python3
-
-import os
-import sys
-import asyncio
+#!/usr/bin/env python3#!/usr/bin/env python3 asyncio
 import logging
 import warnings
 
@@ -29,9 +25,19 @@ client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
 
 # ---------------- STATE ----------------
 queue = asyncio.Queue()
-current = {"msg": None, "progress": 0}
 
-# ---------------- CLI CONTROL ----------------
+current = {
+    "msg": None,
+    "progress": 0
+}
+
+login_state = {
+    "step": None,
+    "phone": None,
+    "phone_code_hash": None
+}
+
+# ---------------- CLI ----------------
 def cli():
     if len(sys.argv) < 2:
         return
@@ -40,13 +46,11 @@ def cli():
 
     if cmd == "pause":
         open(PAUSE_FILE, "w").close()
-        print("paused")
         sys.exit(0)
 
     elif cmd == "resume":
         if os.path.exists(PAUSE_FILE):
             os.remove(PAUSE_FILE)
-        print("resumed")
         sys.exit(0)
 
     elif cmd == "queue":
@@ -63,7 +67,6 @@ async def progress_cb(current_bytes, total):
         return
 
     p = int(current_bytes * 100 / total)
-    current["progress"] = p
 
     if current["msg"]:
         try:
@@ -98,40 +101,84 @@ async def worker():
 
         finally:
             current["msg"] = None
-            current["progress"] = 0
             queue.task_done()
 
-# ---------------- EVENTS ----------------
+# ---------------- LOGIN FLOW ----------------
 @client.on(events.NewMessage(incoming=True))
-async def handle(event):
+async def login_flow(event):
+
+    # ✅ Only handle login when needed
+    if login_state["step"] is None:
+        return
+
+    text = event.raw_text.strip()
+    if not text:
+        return
+
+    # PHONE STEP
+    if login_state["step"] == "phone":
+        login_state["phone"] = text
+
+        try:
+            result = await client.send_code_request(text)
+
+            login_state["phone_code_hash"] = result.phone_code_hash
+            login_state["step"] = "code"
+
+            await event.reply("📩 OTP sent. Send the code")
+
+        except Exception as e:
+            await event.reply(f"❌ {e}")
+
+    # OTP STEP
+    elif login_state["step"] == "code":
+        try:
+            await client.sign_in(
+                phone=login_state["phone"],
+                code=text,
+                phone_code_hash=login_state["phone_code_hash"]
+            )
+
+            login_state["step"] = None
+
+            await event.reply("✅ Login successful!")
+
+        except Exception as e:
+            await event.reply(f"❌ {e}")
+
+# ---------------- DOWNLOAD HANDLER ----------------
+@client.on(events.NewMessage(incoming=True))
+async def downloader(event):
+
+    # ✅ Ignore messages during login
+    if login_state["step"] is not None:
+        return
 
     if not event.message.media:
         return
 
-    print("📥 Media detected")
-
-    await event.reply("📥 Added to download queue")
-
+    await event.reply("📥 Added to queue")
     await queue.put(event)
 
 # ---------------- MAIN ----------------
 async def main():
     cli()
 
+    # ✅ ONLY connect (Critical fix)
     await client.connect()
 
-    # ✅ LOGIN HANDLING (FIXED)
     if not await client.is_user_authorized():
-        print("🔐 Not logged in. Starting login...")
+        print("🔐 Not logged in → switching to Telegram login mode")
 
-        phone = input("Enter phone number (+countrycode): ")
-        await client.send_code_request(phone)
+        me = await client.get_me()
 
-        code = input("Enter OTP: ")
+        # ✅ Send login prompt to Telegram
+        await client.send_message(
+            me.id,
+            "🔐 Login required\n\nSend your phone number (+countrycode)"
+        )
 
-        await client.sign_in(phone, code)
-
-        print("✅ Login successful")
+        login_state["step"] = "phone"
 
     else:
         print("✅ Already logged in")
@@ -154,3 +201,6 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+import os
+import sys
