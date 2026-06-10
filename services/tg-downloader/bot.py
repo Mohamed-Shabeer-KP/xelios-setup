@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import asyncio
 import logging
 import warnings
-import sys
 
 from telethon import TelegramClient, events
 
@@ -31,7 +31,6 @@ client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
 queue = asyncio.Queue()
 current = {"msg": None, "progress": 0}
 
-
 # ---------------- CLI CONTROL ----------------
 def cli():
     if len(sys.argv) < 2:
@@ -54,11 +53,9 @@ def cli():
         print(queue.qsize())
         sys.exit(0)
 
-
 # ---------------- UI ----------------
 def bar(p):
     return "█" * (p // 10) + "░" * (10 - p // 10)
-
 
 # ---------------- PROGRESS ----------------
 async def progress_cb(current_bytes, total):
@@ -78,7 +75,6 @@ async def progress_cb(current_bytes, total):
 
     while os.path.exists(PAUSE_FILE):
         await asyncio.sleep(2)
-
 
 # ---------------- WORKER ----------------
 async def worker():
@@ -105,26 +101,40 @@ async def worker():
             current["progress"] = 0
             queue.task_done()
 
-
 # ---------------- EVENTS ----------------
-@client.on(events.NewMessage)
+@client.on(events.NewMessage(incoming=True))
 async def handle(event):
+
     if not event.message.media:
         return
 
-    await event.reply("📥 Added to queue")
-    await queue.put(event)
+    print("📥 Media detected")
 
+    await event.reply("📥 Added to download queue")
+
+    await queue.put(event)
 
 # ---------------- MAIN ----------------
 async def main():
     cli()
 
-    await client.start()
+    await client.connect()
 
+    # ✅ LOGIN HANDLING (FIXED)
     if not await client.is_user_authorized():
-        print("❌ Login required")
-        return
+        print("🔐 Not logged in. Starting login...")
+
+        phone = input("Enter phone number (+countrycode): ")
+        await client.send_code_request(phone)
+
+        code = input("Enter OTP: ")
+
+        await client.sign_in(phone, code)
+
+        print("✅ Login successful")
+
+    else:
+        print("✅ Already logged in")
 
     print("✅ Downloader running...")
 
@@ -141,7 +151,6 @@ async def main():
             pass
 
         await client.disconnect()
-
 
 if __name__ == "__main__":
     asyncio.run(main())
