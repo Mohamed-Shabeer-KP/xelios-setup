@@ -3,7 +3,6 @@
 import os
 import asyncio
 import logging
-import sys
 
 from telethon import TelegramClient, events
 
@@ -11,14 +10,8 @@ from telethon import TelegramClient, events
 API_ID = 30299030
 API_HASH = os.getenv("TELEGRAM_API_HASH")
 
-PHONE_NUMBER = "+917025257580"  # 👈 CHANGE
-
 SESSION_PATH = os.path.expanduser(
     "~/xelios-setup/services/tg-downloader/session"
-)
-
-LOGIN_FILE = os.path.expanduser(
-    "~/xelios-setup/services/tg-downloader/tg_login_code"
 )
 
 DOWNLOAD_DIR = os.path.expanduser("~/xelios-downloads")
@@ -29,66 +22,8 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 logging.basicConfig(level=logging.INFO)
 
 client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
+
 queue = asyncio.Queue()
-
-# ---------------- CLI ----------------
-def cli():
-    if len(sys.argv) < 2:
-        return
-
-    cmd = sys.argv[1]
-
-    if cmd == "pause":
-        open(PAUSE_FILE, "w").close()
-        sys.exit(0)
-
-    elif cmd == "resume":
-        if os.path.exists(PAUSE_FILE):
-            os.remove(PAUSE_FILE)
-        sys.exit(0)
-
-# ---------------- LOGIN ----------------
-async def auto_login():
-    await client.connect()
-
-    if await client.is_user_authorized():
-        print("✅ Already logged in")
-        return
-
-    print("🔐 Starting login using Telethon start()...")
-
-    # ✅ send OTP automatically
-    await client.send_code_request(PHONE_NUMBER)
-
-    print("📩 OTP sent to Telegram app")
-    print("👉 Send OTP via /otp command")
-
-    # ✅ Wait for OTP file
-    while True:
-        if os.path.exists(LOGIN_FILE):
-            with open(LOGIN_FILE) as f:
-                code = f.read().strip()
-
-            os.remove(LOGIN_FILE)
-
-            print("✅ Received OTP:", code)
-
-            try:
-                # ✅ THIS is the key difference
-                await client.sign_in(
-                    phone=PHONE_NUMBER,
-                    code=code
-                )
-
-                print("✅ LOGIN SUCCESS")
-                return
-
-            except Exception as e:
-                print("❌ Login failed:", e)
-                print("👉 Restart service to retry")
-                return
-
-        await asyncio.sleep(1)
 
 # ---------------- PROGRESS ----------------
 def bar(p):
@@ -149,9 +84,7 @@ async def downloader(event):
 
 # ---------------- MAIN ----------------
 async def main():
-    cli()
-
-    await auto_login()
+    await client.start()   # ✅ uses saved session
 
     print("✅ Downloader running...")
 
