@@ -13,7 +13,7 @@ from telegram.ext import (
 # ---------------- CONFIG ----------------
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 SERVICES_DIR = os.path.expanduser("~/xelios-setup/services")
-LOGIN_FILE = "./tg_login_code"
+LOGIN_FILE = os.path.expanduser("~/xelios-setup/services/tg-downloader/tg_login_code")
 
 logging.basicConfig(level=logging.INFO)
 
@@ -90,24 +90,21 @@ async def otp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     code = context.args[0]
 
     try:
-        # ✅ ensure directory exists
-        directory = os.path.dirname(LOGIN_FILE)
-        if directory and not os.path.exists(directory):
-            os.makedirs(directory, exist_ok=True)
+        print("💾 Writing OTP to:", LOGIN_FILE)
 
-        # ✅ if LOGIN_FILE accidentally exists as folder → remove it
+        os.makedirs(os.path.dirname(LOGIN_FILE), exist_ok=True)
+
         if os.path.isdir(LOGIN_FILE):
             import shutil
             shutil.rmtree(LOGIN_FILE)
 
-        # ✅ write OTP
         with open(LOGIN_FILE, "w") as f:
             f.write(code)
 
         await update.message.reply_text("✅ OTP sent to downloader")
 
     except Exception as e:
-        await update.message.reply_text(f"❌ Failed to write OTP: {e}")
+        await update.message.reply_text(f"❌ Failed: {e}")
 
 # ---------------- ROUTER ----------------
 async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
