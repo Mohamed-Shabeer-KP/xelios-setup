@@ -1,4 +1,8 @@
-#!/usr/bin/env python3#!/usr/bin/env python3 asyncio
+#!/usr/bin/env python3
+
+import os
+import sys
+import asyncio
 import logging
 import warnings
 
@@ -201,6 +205,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-import os
-import sys
