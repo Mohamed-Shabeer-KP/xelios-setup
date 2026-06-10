@@ -25,7 +25,6 @@ SESSION_PATH = os.path.expanduser(
 
 logging.basicConfig(level=logging.INFO)
 
-# Telethon login client
 login_client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
 login_state = {}
 
@@ -88,7 +87,7 @@ async def render_main_menu(query):
 # ---------------- COMMANDS ----------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🤖 *Xelios Service Manager*\n\nUse /login to authenticate Telegram.",
+        "🤖 *Xelios Service Manager*\n\nUse /login to authenticate.",
         reply_markup=main_menu(),
         parse_mode="Markdown"
     )
@@ -98,9 +97,7 @@ async def login(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     login_state[user_id] = {"step": "phone"}
 
-    await update.message.reply_text(
-        "🔐 Send your phone number (+1234567890)"
-    )
+    await update.message.reply_text("🔐 Send your phone number (+1234567890)")
 
 # ✅ LOGIN FLOW
 async def login_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -112,7 +109,7 @@ async def login_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     state = login_state[user_id]
 
-    # PHONE STEP
+    # STEP 1: PHONE
     if state["step"] == "phone":
         await login_client.connect()
 
@@ -122,14 +119,20 @@ async def login_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
         state["phone_code_hash"] = result.phone_code_hash
         state["step"] = "code"
 
-        await update.message.reply_text("📩 OTP sent. Send the code.")
+        await update.message.reply_text("📩 OTP sent. Send code like:\n`1 2 3 4 5`", parse_mode="Markdown")
 
-    # OTP STEP
+    # STEP 2: OTP
     elif state["step"] == "code":
         try:
+            # ✅ Remove spaces/dashes (OBFUSCATION SUPPORT)
+            code = text.replace(" ", "").replace("-", "")
+
+            print("👉 Using OTP:", code)
+            print("👉 Using hash:", state["phone_code_hash"])
+
             await login_client.sign_in(
                 phone=state["phone"],
-                code=text,
+                code=code,
                 phone_code_hash=state["phone_code_hash"]
             )
 
@@ -142,9 +145,9 @@ async def login_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 state["step"] = "password"
                 await update.message.reply_text("🔐 Enter your 2FA password")
             else:
-                await update.message.reply_text(f"❌ Failed: {e}")
+                await update.message.reply_text(f"❌ Login failed:\n{e}")
 
-    # 2FA PASSWORD
+    # STEP 3: 2FA
     elif state["step"] == "password":
         try:
             await login_client.sign_in(password=text)
@@ -170,10 +173,8 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif data == "services":
-        keyboard = [
-            [InlineKeyboardButton(s, callback_data=f"svc:{s}")]
-            for s in list_services()
-        ]
+        keyboard = [[InlineKeyboardButton(s, callback_data=f"svc:{s}")]
+                    for s in list_services()]
         keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="back")])
 
         await query.edit_message_text(
@@ -219,7 +220,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, login_flow))
     app.add_handler(CallbackQueryHandler(router))
 
-    print("🤖 Service manager bot running...")
+    print("🤖 Bot running...")
     app.run_polling()
 
 if __name__ == "__main__":
