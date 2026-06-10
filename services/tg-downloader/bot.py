@@ -51,44 +51,33 @@ def cli():
 async def auto_login():
     await client.connect()
 
-    # ✅ if already logged in
     if await client.is_user_authorized():
         print("✅ Already logged in")
         return
 
-    print("🔐 Starting fresh login session...")
+    print("🔐 Starting login using Telethon start()...")
 
-    # ✅ ALWAYS request OTP only ONCE
-    print("📡 Requesting OTP...")
-    
-    result = await client.send_code_request(PHONE_NUMBER)
-    
-    print("✅ API response received")
-    print("👉 phone_code_hash:", result.phone_code_hash)
-    print("👉 type:", type(result))
-    print("👉 full result:", result)
-    phone_code_hash = result.phone_code_hash
+    # ✅ send OTP automatically
+    await client.send_code_request(PHONE_NUMBER)
 
-    print("📩 OTP sent")
-    print("👉 Send quickly using /otp")
-    print("👀 Waiting at:", LOGIN_FILE)
+    print("📩 OTP sent to Telegram app")
+    print("👉 Send OTP via /otp command")
 
-    # ✅ Wait for OTP
+    # ✅ Wait for OTP file
     while True:
         if os.path.exists(LOGIN_FILE):
+            with open(LOGIN_FILE) as f:
+                code = f.read().strip()
+
+            os.remove(LOGIN_FILE)
+
+            print("✅ Received OTP:", code)
+
             try:
-                with open(LOGIN_FILE) as f:
-                    code = f.read().strip()
-
-                os.remove(LOGIN_FILE)
-
-                print("✅ Received OTP:", code)
-
-                # ✅ IMPORTANT: use sign_in ONLY ONCE
+                # ✅ THIS is the key difference
                 await client.sign_in(
                     phone=PHONE_NUMBER,
-                    code=code,
-                    phone_code_hash=phone_code_hash
+                    code=code
                 )
 
                 print("✅ LOGIN SUCCESS")
@@ -96,11 +85,8 @@ async def auto_login():
 
             except Exception as e:
                 print("❌ Login failed:", e)
-
-                print("🛑 STOP here. Do NOT retry automatically.")
-                print("👉 Restart downloader to try again")
-
-                return   # ✅ EXIT completely (no loops!)
+                print("👉 Restart service to retry")
+                return
 
         await asyncio.sleep(1)
 
