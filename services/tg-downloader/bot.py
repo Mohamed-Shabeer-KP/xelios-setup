@@ -154,8 +154,8 @@ async def process_download(task_id):
             await msg.edit(
                 f"⬇️ {task['name']}\n[{bar}] {pct}%",
                 buttons=[[
-                    Button.inline("⏸ Pause", f"pause:{task_id}"),
-                    Button.inline("❌ Remove", f"delete:{task_id}")
+                    Button.inline("⏸ Pause", f"pause:{task_id}".encode())
+                    Button.inline("❌ Remove", f"delete:{task_id}".encode())
                 ]]
             )
 
@@ -187,15 +187,15 @@ async def show_queue(event):
 
         if task["status"] == "downloading":
             if task["paused"]:
-                row.append(Button.inline("▶", f"resume:{task_id}"))
+                row.append(Button.inline("▶", f"resume:{task_id}".encode()))
             else:
-                row.append(Button.inline("⏸", f"pause:{task_id}"))
+                row.append(Button.inline("⏸", f"pause:{task_id}".encode()))
 
         row.append(Button.inline("❌", f"delete:{task_id}"))
 
         buttons.append(row)
 
-    buttons.append([Button.inline("🔄 Refresh", b"queue")])
+    buttons.append([Button.inline("📦 Queue", "queue".encode())])
 
     await event.edit(text, buttons=buttons, parse_mode="Markdown")
 
