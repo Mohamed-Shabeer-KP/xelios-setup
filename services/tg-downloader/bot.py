@@ -22,7 +22,6 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 logging.basicConfig(level=logging.INFO)
 
 client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
-
 queue = asyncio.Queue()
 
 # ---------------- PROGRESS ----------------
@@ -84,7 +83,7 @@ async def downloader(event):
 
 # ---------------- MAIN ----------------
 async def main():
-    await client.start()   # ✅ uses saved session
+    await client.start()
 
     print("✅ Downloader running...")
 
