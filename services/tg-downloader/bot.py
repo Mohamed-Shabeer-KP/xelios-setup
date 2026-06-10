@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 import os
-import sys
 import asyncio
 import logging
 import warnings
+import sys
 
 from telethon import TelegramClient, events
 
@@ -30,11 +30,7 @@ client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
 # ---------------- STATE ----------------
 queue = asyncio.Queue()
 
-current = {
-    "msg": None,
-    "progress": 0
-}
-
+current = {"msg": None}
 login_state = {
     "step": None,
     "phone": None,
@@ -57,15 +53,10 @@ def cli():
             os.remove(PAUSE_FILE)
         sys.exit(0)
 
-    elif cmd == "queue":
-        print(queue.qsize())
-        sys.exit(0)
-
 # ---------------- UI ----------------
 def bar(p):
     return "█" * (p // 10) + "░" * (10 - p // 10)
 
-# ---------------- PROGRESS ----------------
 async def progress_cb(current_bytes, total):
     if total == 0:
         return
@@ -79,9 +70,6 @@ async def progress_cb(current_bytes, total):
             )
         except:
             pass
-
-    while os.path.exists(PAUSE_FILE):
-        await asyncio.sleep(2)
 
 # ---------------- WORKER ----------------
 async def worker():
@@ -111,42 +99,29 @@ async def worker():
 @client.on(events.NewMessage(incoming=True))
 async def login_flow(event):
 
-    text = event.raw_text.strip() if event.raw_text else ""
-
-    # ✅ If NOT logged in → trigger login UI
     if not await client.is_user_authorized():
 
-        # ✅ First interaction
+        text = event.raw_text.strip() if event.raw_text else ""
+
         if login_state["step"] is None:
             login_state["step"] = "phone"
             await event.reply(
-                "🔐 *Login Required*\n\n"
-                "Send your phone number with country code.\n"
-                "Example: +919876543210",
-                parse_mode="Markdown"
+                "🔐 Login Required\n\nSend your phone number (+countrycode)"
             )
             return
 
-    # ✅ PHONE STEP
-    if login_state["step"] == "phone":
-        login_state["phone"] = text
+        elif login_state["step"] == "phone":
+            login_state["phone"] = text
 
-        try:
             result = await client.send_code_request(text)
 
             login_state["phone_code_hash"] = result.phone_code_hash
             login_state["step"] = "code"
 
-            await event.reply("📩 OTP sent. Send the code")
+            await event.reply("📩 OTP sent. Send code")
+            return
 
-        except Exception as e:
-            await event.reply(f"❌ {e}")
-
-        return
-
-    # ✅ OTP STEP
-    if login_state["step"] == "code":
-        try:
+        elif login_state["step"] == "code":
             await client.sign_in(
                 phone=login_state["phone"],
                 code=text,
@@ -155,18 +130,13 @@ async def login_flow(event):
 
             login_state["step"] = None
 
-            await event.reply("✅ Login successful! Downloader is ready.")
+            await event.reply("✅ Login successful!")
+            return
 
-        except Exception as e:
-            await event.reply(f"❌ {e}")
-
-        return
-
-# ---------------- DOWNLOAD HANDLER ----------------
+# ---------------- DOWNLOAD ----------------
 @client.on(events.NewMessage(incoming=True))
 async def downloader(event):
 
-    # ✅ Ignore messages during login
     if login_state["step"] is not None:
         return
 
@@ -180,23 +150,12 @@ async def downloader(event):
 async def main():
     cli()
 
-    # ✅ ONLY connect (Critical fix)
     await client.connect()
 
     if not await client.is_user_authorized():
-    
-        print("🔐 Not logged in → waiting for Telegram login")
-    
-        # ✅ Use a known chat (Saved Messages via "me")
-        login_state["step"] = "phone"
-    
-        # ✅ You must manually send first message
-        print("\n👉 Send ANY message in Telegram (Saved Messages) to start login")
-
+        print("🔐 Not logged in → send message in Telegram to start login")
     else:
-        print("✅ Already logged in")
-
-    print("✅ Downloader running...")
+        print("✅ Logged in")
 
     worker_task = asyncio.create_task(worker())
 
@@ -205,11 +164,6 @@ async def main():
 
     finally:
         worker_task.cancel()
-        try:
-            await worker_task
-        except:
-            pass
-
         await client.disconnect()
 
 if __name__ == "__main__":
