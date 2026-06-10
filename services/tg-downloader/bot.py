@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
 import os
-import sys
+import asyncio
 import logging
 import warnings
+import sys
 
 from telethon import TelegramClient, events
 
-warnings.filterwarnings("ignore", category=RuntimeWarning)
+warnings.filterwarnings("ignore")
 
 # ---------------- CONFIG ----------------
 API_ID = 30299030
@@ -27,15 +28,11 @@ logging.basicConfig(level=logging.INFO)
 client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
 
 # ---------------- STATE ----------------
-download_queue = asyncio.Queue()
-
-current = {
-    "progress": 0,
-    "msg": None
-}
+queue = asyncio.Queue()
+current = {"msg": None, "progress": 0}
 
 
-# ---------------- CLI ----------------
+# ---------------- CLI CONTROL ----------------
 def cli():
     if len(sys.argv) < 2:
         return
@@ -54,14 +51,13 @@ def cli():
         sys.exit(0)
 
     elif cmd == "queue":
-        print(download_queue.qsize())
+        print(queue.qsize())
         sys.exit(0)
 
 
 # ---------------- UI ----------------
-def progress_bar(p):
-    filled = p // 10
-    return "█" * filled + "░" * (10 - filled)
+def bar(p):
+    return "█" * (p // 10) + "░" * (10 - p // 10)
 
 
 # ---------------- PROGRESS ----------------
@@ -69,14 +65,13 @@ async def progress_cb(current_bytes, total):
     if total == 0:
         return
 
-    percent = int(current_bytes * 100 / total)
-    current["progress"] = percent
+    p = int(current_bytes * 100 / total)
+    current["progress"] = p
 
     if current["msg"]:
         try:
             await current["msg"].edit(
-                f"⬇️ Downloading...\n"
-                f"[{progress_bar(percent)}] {percent}%"
+                f"⬇️ Downloading...\n[{bar(p)}] {p}%"
             )
         except:
             pass
@@ -88,19 +83,18 @@ async def progress_cb(current_bytes, total):
 # ---------------- WORKER ----------------
 async def worker():
     while True:
-        event = await download_queue.get()
+        event = await queue.get()
 
         try:
-            msg = await event.reply("⬇️ Starting download...")
-            current["msg"] = msg
-            current["progress"] = 0
+            ui = await event.reply("⬇️ Starting download...")
+            current["msg"] = ui
 
             path = await event.message.download_media(
                 file=DOWNLOAD_DIR,
                 progress_callback=progress_cb
             )
 
-            await msg.edit(f"✅ Download completed\n📁 {path}")
+            await ui.edit(f"✅ Downloaded\n📁 {path}")
 
         except Exception as e:
             if current["msg"]:
@@ -109,19 +103,17 @@ async def worker():
         finally:
             current["msg"] = None
             current["progress"] = 0
-            download_queue.task_done()
+            queue.task_done()
 
 
 # ---------------- EVENTS ----------------
 @client.on(events.NewMessage)
-async def handle_media(event):
-
+async def handle(event):
     if not event.message.media:
         return
 
-    await event.reply("📥 Added to download queue")
-
-    await download_queue.put(event)
+    await event.reply("📥 Added to queue")
+    await queue.put(event)
 
 
 # ---------------- MAIN ----------------
@@ -131,20 +123,20 @@ async def main():
     await client.start()
 
     if not await client.is_user_authorized():
-        print("❌ Not logged in")
+        print("❌ Login required")
         return
 
     print("✅ Downloader running...")
 
-    task = asyncio.create_task(worker())
+    worker_task = asyncio.create_task(worker())
 
     try:
         await client.run_until_disconnected()
 
     finally:
-        task.cancel()
+        worker_task.cancel()
         try:
-            await task
+            await worker_task
         except:
             pass
 
