@@ -89,10 +89,25 @@ async def otp(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     code = context.args[0]
 
-    with open(LOGIN_FILE, "w") as f:
-        f.write(code)
+    try:
+        # ✅ ensure directory exists
+        directory = os.path.dirname(LOGIN_FILE)
+        if directory and not os.path.exists(directory):
+            os.makedirs(directory, exist_ok=True)
 
-    await update.message.reply_text("✅ OTP sent to downloader")
+        # ✅ if LOGIN_FILE accidentally exists as folder → remove it
+        if os.path.isdir(LOGIN_FILE):
+            import shutil
+            shutil.rmtree(LOGIN_FILE)
+
+        # ✅ write OTP
+        with open(LOGIN_FILE, "w") as f:
+            f.write(code)
+
+        await update.message.reply_text("✅ OTP sent to downloader")
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ Failed to write OTP: {e}")
 
 # ---------------- ROUTER ----------------
 async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
