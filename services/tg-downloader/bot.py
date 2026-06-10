@@ -56,44 +56,49 @@ async def auto_login():
         return
 
     while True:
-        print("🔐 Sending OTP to:", PHONE_NUMBER)
+        try:
+            print("\n🔐 Requesting fresh OTP...")
+            
+            result = await client.send_code_request(PHONE_NUMBER)
+            phone_code_hash = result.phone_code_hash
 
-        result = await client.send_code_request(PHONE_NUMBER)
-        phone_code_hash = result.phone_code_hash
+            print("📩 OTP sent")
+            print("⚠️ Send it IMMEDIATELY using /otp")
+            print("👀 Waiting at:", LOGIN_FILE)
 
-        print("📩 OTP sent.")
-        print("⚠️ Send NEW OTP via /otp (do NOT reuse old code)")
-        print("👀 Waiting for OTP file at:", LOGIN_FILE)
+            # wait for OTP file ONCE
+            while True:
+                if os.path.exists(LOGIN_FILE) and os.path.isfile(LOGIN_FILE):
+                    with open(LOGIN_FILE) as f:
+                        code = f.read().strip()
 
-        # ✅ Wait ONLY ONCE for ONE OTP
-        while True:
-            if os.path.exists(LOGIN_FILE) and os.path.isfile(LOGIN_FILE):
-                print("✅ OTP file detected!")
+                    os.remove(LOGIN_FILE)
 
-                with open(LOGIN_FILE) as f:
-                    code = f.read().strip()
+                    print("✅ Received OTP:", code)
 
-                print("✅ OTP read:", code)
+                    try:
+                        await client.sign_in(
+                            phone=PHONE_NUMBER,
+                            code=code,
+                            phone_code_hash=phone_code_hash
+                        )
 
-                os.remove(LOGIN_FILE)
+                        print("✅ LOGIN SUCCESS")
+                        return
 
-                try:
-                    await client.sign_in(
-                        phone=PHONE_NUMBER,
-                        code=code,
-                        phone_code_hash=phone_code_hash
-                    )
+                    except Exception as e:
+                        print("❌ Login failed:", e)
 
-                    print("✅ Login successful")
-                    return
+                        # ✅ IMPORTANT: break immediately → get new OTP
+                        break
 
-                except Exception as e:
-                    print("❌ Login failed:", e)
+                await asyncio.sleep(1)
 
-                    print("🔁 Requesting NEW OTP...")
-                    break   # ✅ break and send NEW OTP
+        except Exception as e:
+            print("❌ Outer error:", e)
 
-            await asyncio.sleep(1)
+        # small delay before retry
+        await asyncio.sleep(2)
 
 # ---------------- PROGRESS ----------------
 def bar(p):
