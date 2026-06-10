@@ -13,6 +13,8 @@ from telegram.ext import (
 from telethon import TelegramClient
 
 # ---------------- CONFIG ----------------
+SERVICES_DIR = os.path.expanduser("~/xelios-setup/services")
+
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 API_HASH = os.getenv("TELEGRAM_API_HASH", "")
 API_ID = 30299030
@@ -21,7 +23,8 @@ SESSION_PATH = os.path.expanduser(
     "~/xelios-setup/services/telegram-session/session"
 )
 
-DOWNLOADER_PATH = os.path.abspath("tg-downloader.py")
+# ✅ IMPORTANT: Set correct path
+DOWNLOADER_PATH = "/full/path/to/tg-downloader.py"
 
 logging.basicConfig(level=logging.INFO)
 
@@ -34,12 +37,57 @@ LOGIN_STATE = {
     "phone_code_hash": None
 }
 
+# ---------------- HELPERS ----------------
+def service_path(name):
+    return os.path.join(SERVICES_DIR, name)
+
+
+def list_services():
+    if not os.path.isdir(SERVICES_DIR):
+        return []
+
+    return [
+        s for s in sorted(os.listdir(SERVICES_DIR))
+        if os.path.isdir(service_path(s))
+        and os.path.isfile(os.path.join(service_path(s), "run"))
+    ]
+
+
+def is_running(name):
+    try:
+        result = subprocess.run(
+            ["sv", "status", service_path(name)],
+            capture_output=True,
+            text=True
+        )
+        return result.stdout.startswith("run:")
+    except:
+        return False
+
+
+def start_service(name):
+    path = service_path(name)
+    subprocess.run(["rm", "-f", f"{path}/down"])
+    subprocess.run(["sv", "up", path])
+    return f"🟢 {name} started"
+
+
+def stop_service(name):
+    path = service_path(name)
+    subprocess.run(["sv", "down", path])
+    subprocess.run(["touch", f"{path}/down"])
+    return f"🔴 {name} stopped"
+
+
 # ---------------- UI ----------------
 async def main_menu():
     await client.connect()
     logged_in = await client.is_user_authorized()
 
-    buttons = []
+    buttons = [
+        [InlineKeyboardButton("📊 Status", callback_data="status")],
+        [InlineKeyboardButton("🔧 Services", callback_data="services")]
+    ]
 
     if not logged_in:
         buttons.append([InlineKeyboardButton("🔐 Login", callback_data="login")])
@@ -47,11 +95,19 @@ async def main_menu():
     return InlineKeyboardMarkup(buttons)
 
 
+async def render_main_menu(query):
+    await query.edit_message_text(
+        "🤖 *Xelios Service Manager*",
+        reply_markup=await main_menu(),
+        parse_mode="Markdown"
+    )
+
+
 # ---------------- COMMAND ----------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🤖 *Telegram Downloader Bot*\n\n"
-        "Send a Telegram link or file to download.",
+        "🤖 *Xelios Service Manager*\n\n"
+        "Send a Telegram link to download.",
         reply_markup=await main_menu(),
         parse_mode="Markdown"
     )
@@ -68,23 +124,22 @@ async def start_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
     LOGIN_STATE["step"] = "phone"
 
     await update.callback_query.edit_message_text(
-        "📱 Send phone number (+countrycode)"
+        "📱 Send phone number (+country code)"
     )
 
 
+# ---------------- MESSAGE HANDLER ----------------
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await client.connect()
 
     text = update.message.text if update.message.text else ""
 
-    # -------------------------------------------------
     # ✅ LOGIN FLOW
-    # -------------------------------------------------
     if LOGIN_STATE["step"] is not None:
 
         if await client.is_user_authorized():
             LOGIN_STATE["step"] = None
-            await update.message.reply_text("✅ Already logged in")
+            await update.message.reply_text("✅ Already logged in.")
             return
 
         if LOGIN_STATE["step"] == "phone":
@@ -116,17 +171,13 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return
 
-    # -------------------------------------------------
     # ✅ REQUIRE LOGIN
-    # -------------------------------------------------
     if not await client.is_user_authorized():
         await update.message.reply_text("🔐 Please login first")
         return
 
-    # -------------------------------------------------
-    # ✅ CALL DOWNLOADER FOR LINKS
-    # -------------------------------------------------
-    if "t.me/" in text:
+    # ✅ DOWNLOAD FEATURE (NEW)
+    if text and "t.me/" in text:
 
         await update.message.reply_text("⬇️ Downloading...")
 
@@ -154,18 +205,73 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return
 
-    await update.message.reply_text(
-        "📩 Send a Telegram link to download."
-    )
-
 
 # ---------------- ROUTER ----------------
 async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if query.data == "login":
+    data = query.data
+
+    if data == "status":
+        text = "📊 *Service Status*\n\n"
+        for s in list_services():
+            icon = "🟢" if is_running(s) else "🔴"
+            text += f"{icon} {s}\n"
+
+        await query.edit_message_text(
+            text,
+            reply_markup=await main_menu(),
+            parse_mode="Markdown"
+        )
+
+    elif data == "services":
+        keyboard = [
+            [InlineKeyboardButton(s, callback_data=f"svc:{s}")]
+            for s in list_services()
+        ]
+        keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="back")])
+
+        await query.edit_message_text(
+            "🔧 Services:",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    elif data == "back":
+        await render_main_menu(query)
+
+    elif data == "login":
         await start_login(update, context)
+
+    elif data.startswith("svc:"):
+        name = data.split(":")[1]
+        running = is_running(name)
+
+        keyboard = []
+        if running:
+            keyboard.append([InlineKeyboardButton("⏹️ Stop", callback_data=f"stop:{name}")])
+        else:
+            keyboard.append([InlineKeyboardButton("▶️ Start", callback_data=f"start:{name}")])
+
+        keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="services")])
+
+        await query.edit_message_text(
+            f"*{name}*\nStatus: {'🟢 Running' if running else '🔴 Stopped'}",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
+
+    elif data.startswith("start:"):
+        await query.edit_message_text(
+            start_service(data.split(":")[1]),
+            reply_markup=await main_menu()
+        )
+
+    elif data.startswith("stop:"):
+        await query.edit_message_text(
+            stop_service(data.split(":")[1]),
+            reply_markup=await main_menu()
+        )
 
 
 # ---------------- MAIN ----------------
