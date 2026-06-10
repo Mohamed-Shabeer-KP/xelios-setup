@@ -62,20 +62,22 @@ async def auto_login():
         phone_code_hash = result.phone_code_hash
 
         print("📩 OTP sent.")
+        print("⚠️ Send NEW OTP via /otp (do NOT reuse old code)")
         print("👀 Waiting for OTP file at:", LOGIN_FILE)
 
+        # ✅ Wait ONLY ONCE for ONE OTP
         while True:
             if os.path.exists(LOGIN_FILE) and os.path.isfile(LOGIN_FILE):
                 print("✅ OTP file detected!")
 
+                with open(LOGIN_FILE) as f:
+                    code = f.read().strip()
+
+                print("✅ OTP read:", code)
+
+                os.remove(LOGIN_FILE)
+
                 try:
-                    with open(LOGIN_FILE) as f:
-                        code = f.read().strip()
-
-                    print("✅ OTP read:", code)
-
-                    os.remove(LOGIN_FILE)
-
                     await client.sign_in(
                         phone=PHONE_NUMBER,
                         code=code,
@@ -86,13 +88,10 @@ async def auto_login():
                     return
 
                 except Exception as e:
-                    print("❌ Login error:", e)
+                    print("❌ Login failed:", e)
 
-                    if "expired" in str(e).lower():
-                        print("🔁 OTP expired. Retrying...")
-                        break
-                    else:
-                        print("⚠️ Wrong OTP, send again")
+                    print("🔁 Requesting NEW OTP...")
+                    break   # ✅ break and send NEW OTP
 
             await asyncio.sleep(1)
 
