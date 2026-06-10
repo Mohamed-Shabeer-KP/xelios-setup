@@ -16,7 +16,7 @@ SESSION_PATH = os.path.expanduser(
     "~/xelios-setup/services/tg-downloader/session"
 )
 
-DOWNLOAD_DIR = os.path.expanduser("~/xelios-downloads/storage/shared/download")
+DOWNLOAD_DIR = os.path.expanduser("~/xelios-downloads")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 logging.basicConfig(level=logging.INFO)
@@ -28,10 +28,11 @@ downloads = {}
 counter = 0
 lock = asyncio.Lock()
 
-# ---------------- START MESSAGE ----------------
+# ---------------- START BUTTON ----------------
 @client.on(events.NewMessage(pattern='/start'))
 async def start_handler(event):
-    await event.reply(
+    await client.send_message(
+        event.chat_id,
         "📥 *Downloader Ready*",
         buttons=[[Button.inline("📦 Queue", b"queue")]],
         parse_mode="Markdown"
@@ -55,8 +56,6 @@ async def downloader(event):
         if not event.message.media:
             return
 
-        print(f"✅ Triggered from group: {chat.title}")
-
         await handle_download(event)
 
     except Exception as e:
@@ -72,7 +71,9 @@ async def handle_download(event):
 
     file_name = event.file.name or f"file_{task_id}"
 
-    msg = await event.reply(
+    # ✅ IMPORTANT: use send_message instead of reply
+    msg = await client.send_message(
+        event.chat_id,
         f"📥 *Queued:* {file_name}",
         buttons=[[Button.inline("▶ Start", f"start:{task_id}".encode())]],
         parse_mode="Markdown"
@@ -147,7 +148,6 @@ async def process_download(task_id):
             pct = int(current * 100 / total)
             task["progress"] = pct
 
-            # ✅ reduce spam updates
             if pct - last_update < 5:
                 return
             last_update = pct
@@ -159,7 +159,8 @@ async def process_download(task_id):
                 buttons=[[
                     Button.inline("⏸ Pause", f"pause:{task_id}".encode()),
                     Button.inline("❌ Remove", f"delete:{task_id}".encode())
-                ]]
+                ]],
+                parse_mode="Markdown"
             )
 
         path = await event.message.download_media(
@@ -169,7 +170,10 @@ async def process_download(task_id):
 
         task["status"] = "done"
 
-        await msg.edit(f"✅ *Done:* {path}", parse_mode="Markdown")
+        await msg.edit(
+            f"✅ *Done:* {path}",
+            parse_mode="Markdown"
+        )
 
     except Exception as e:
         task["status"] = "failed"
@@ -184,7 +188,7 @@ async def show_queue(event):
     buttons = []
 
     for task_id, task in downloads.items():
-        text += f"{task_id}. {task['name']} ({task['status']} {task.get('progress',0)}%)\n"
+        text += f"{task_id}. {task['name']} ({task['status']} {task['progress']}%)\n"
 
         row = []
 
@@ -194,7 +198,6 @@ async def show_queue(event):
             else:
                 row.append(Button.inline("⏸", f"pause:{task_id}".encode()))
 
-        # ✅ FIX: encode here also
         row.append(Button.inline("❌", f"delete:{task_id}".encode()))
 
         buttons.append(row)
