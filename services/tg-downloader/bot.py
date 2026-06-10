@@ -11,16 +11,19 @@ from telethon import TelegramClient, events
 API_ID = 30299030
 API_HASH = os.getenv("TELEGRAM_API_HASH")
 
-PHONE_NUMBER = "+917025257580"  # 👈 CHANGE THIS
+PHONE_NUMBER = "+917025257580"  # CHANGE THIS
 
 SESSION_PATH = os.path.expanduser(
     "~/xelios-setup/services/tg-downloader/session"
 )
 
-DOWNLOAD_DIR = os.path.expanduser("~/xelios-downloads")
+# ✅ SAME PATH in both scripts (IMPORTANT)
+LOGIN_FILE = os.path.expanduser(
+    "~/xelios-setup/services/tg-downloader/tg_login_code"
+)
 
+DOWNLOAD_DIR = os.path.expanduser("~/xelios-downloads")
 PAUSE_FILE = "/tmp/tg_downloader_pause"
-LOGIN_FILE = "~/xelios-setup/services/tg-bot/tg_login_code"
 
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
@@ -54,28 +57,39 @@ async def auto_login():
         print("✅ Already logged in")
         return
 
-    print("🔐 Sending OTP...")
+    print("🔐 Sending OTP to:", PHONE_NUMBER)
 
     result = await client.send_code_request(PHONE_NUMBER)
     phone_code_hash = result.phone_code_hash
 
-    print("📩 OTP sent. Waiting for /otp ...")
+    print("📩 OTP sent.")
+    print("👀 Waiting for OTP file at:", LOGIN_FILE)
 
-    while not os.path.exists(LOGIN_FILE):
+    while True:
+        if os.path.exists(LOGIN_FILE) and os.path.isfile(LOGIN_FILE):
+            print("✅ OTP file detected!")
+
+            try:
+                with open(LOGIN_FILE) as f:
+                    code = f.read().strip()
+
+                print("✅ OTP read:", code)
+
+                os.remove(LOGIN_FILE)
+
+                await client.sign_in(
+                    phone=PHONE_NUMBER,
+                    code=code,
+                    phone_code_hash=phone_code_hash
+                )
+
+                print("✅ Login successful")
+                break
+
+            except Exception as e:
+                print("❌ Login error:", e)
+
         await asyncio.sleep(1)
-
-    with open(LOGIN_FILE) as f:
-        code = f.read().strip()
-
-    os.remove(LOGIN_FILE)
-
-    await client.sign_in(
-        phone=PHONE_NUMBER,
-        code=code,
-        phone_code_hash=phone_code_hash
-    )
-
-    print("✅ Login successful")
 
 # ---------------- PROGRESS ----------------
 def bar(p):
