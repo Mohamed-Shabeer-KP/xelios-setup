@@ -11,13 +11,12 @@ from telethon import TelegramClient, events
 API_ID = 30299030
 API_HASH = os.getenv("TELEGRAM_API_HASH")
 
-PHONE_NUMBER = "+917025257580"  # CHANGE THIS
+PHONE_NUMBER = "+917025257580"  # 👈 CHANGE
 
 SESSION_PATH = os.path.expanduser(
     "~/xelios-setup/services/tg-downloader/session"
 )
 
-# ✅ SAME PATH in both scripts (IMPORTANT)
 LOGIN_FILE = os.path.expanduser(
     "~/xelios-setup/services/tg-downloader/tg_login_code"
 )
@@ -30,7 +29,6 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 logging.basicConfig(level=logging.INFO)
 
 client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
-
 queue = asyncio.Queue()
 
 # ---------------- CLI ----------------
@@ -57,39 +55,46 @@ async def auto_login():
         print("✅ Already logged in")
         return
 
-    print("🔐 Sending OTP to:", PHONE_NUMBER)
-
-    result = await client.send_code_request(PHONE_NUMBER)
-    phone_code_hash = result.phone_code_hash
-
-    print("📩 OTP sent.")
-    print("👀 Waiting for OTP file at:", LOGIN_FILE)
-
     while True:
-        if os.path.exists(LOGIN_FILE) and os.path.isfile(LOGIN_FILE):
-            print("✅ OTP file detected!")
+        print("🔐 Sending OTP to:", PHONE_NUMBER)
 
-            try:
-                with open(LOGIN_FILE) as f:
-                    code = f.read().strip()
+        result = await client.send_code_request(PHONE_NUMBER)
+        phone_code_hash = result.phone_code_hash
 
-                print("✅ OTP read:", code)
+        print("📩 OTP sent.")
+        print("👀 Waiting for OTP file at:", LOGIN_FILE)
 
-                os.remove(LOGIN_FILE)
+        while True:
+            if os.path.exists(LOGIN_FILE) and os.path.isfile(LOGIN_FILE):
+                print("✅ OTP file detected!")
 
-                await client.sign_in(
-                    phone=PHONE_NUMBER,
-                    code=code,
-                    phone_code_hash=phone_code_hash
-                )
+                try:
+                    with open(LOGIN_FILE) as f:
+                        code = f.read().strip()
 
-                print("✅ Login successful")
-                break
+                    print("✅ OTP read:", code)
 
-            except Exception as e:
-                print("❌ Login error:", e)
+                    os.remove(LOGIN_FILE)
 
-        await asyncio.sleep(1)
+                    await client.sign_in(
+                        phone=PHONE_NUMBER,
+                        code=code,
+                        phone_code_hash=phone_code_hash
+                    )
+
+                    print("✅ Login successful")
+                    return
+
+                except Exception as e:
+                    print("❌ Login error:", e)
+
+                    if "expired" in str(e).lower():
+                        print("🔁 OTP expired. Retrying...")
+                        break
+                    else:
+                        print("⚠️ Wrong OTP, send again")
+
+            await asyncio.sleep(1)
 
 # ---------------- PROGRESS ----------------
 def bar(p):
