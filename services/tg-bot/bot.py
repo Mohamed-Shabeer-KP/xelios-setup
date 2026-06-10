@@ -139,8 +139,34 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif data.startswith("start:"):
-        msg = start_service(data.split(":")[1])
-        await query.edit_message_text(msg, reply_markup=main_menu())
+        name = data.split(":")[1]
+    
+        msg = start_service(name)
+    
+        # ✅ If starting downloader → check login status
+        if name == "tg-downloader":
+            try:
+                result = subprocess.run(
+                    ["python3", "/full/path/to/tg-downloader.py", "status"],
+                    capture_output=True,
+                    text=True
+                )
+    
+                status = result.stdout.strip()
+    
+                if status == "NOT_LOGGED_IN":
+                    msg += (
+                        "\n\n🔐 *Login Required*\n"
+                        "1️⃣ Open Telegram\n"
+                        "2️⃣ Go to Saved Messages\n"
+                        "3️⃣ Send any message (like 'hi')\n"
+                        "4️⃣ Follow login steps"
+                    )
+    
+            except Exception as e:
+                msg += f"\n⚠️ Could not check login status: {e}"
+    
+        await query.edit_message_text(msg, reply_markup=main_menu(), parse_mode="Markdown")
 
     elif data.startswith("stop:"):
         msg = stop_service(data.split(":")[1])
