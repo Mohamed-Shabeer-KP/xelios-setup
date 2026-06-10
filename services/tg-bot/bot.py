@@ -2,45 +2,54 @@
 
 import os
 import subprocess
+import logging
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
-    Application, CommandHandler, CallbackQueryHandler, ContextTypes
+    Application, CommandHandler, CallbackQueryHandler,
+    ContextTypes
 )
 
+# ---------------- CONFIG ----------------
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-
-# ✅ service name (runit)
 SERVICE_NAME = "tg-downloader"
 
+logging.basicConfig(level=logging.INFO)
 
-# ---------------- SERVICE HELPERS ----------------
-def service_cmd(cmd):
-    return subprocess.run(["sv", cmd, SERVICE_NAME],
-                          capture_output=True, text=True)
-
-
-def service_status():
-    result = service_cmd("status")
+# ---------------- HELPERS ----------------
+def run_sv(command):
+    result = subprocess.run(
+        ["sv", command, SERVICE_NAME],
+        capture_output=True,
+        text=True
+    )
     return result.stdout.strip()
+
+
+def run_downloader(cmd):
+    return subprocess.run(
+        ["python3", "/full/path/to/tg-downloader.py", cmd],
+        capture_output=True,
+        text=True
+    ).stdout.strip()
 
 
 # ---------------- UI ----------------
 def main_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 Status", callback_data="status")],
-        [InlineKeyboardButton("▶ Start Downloader", callback_data="start")],
-        [InlineKeyboardButton("⏹ Stop Downloader", callback_data="stop")],
+        [InlineKeyboardButton("▶ Start", callback_data="start")],
+        [InlineKeyboardButton("⏹ Stop", callback_data="stop")],
         [InlineKeyboardButton("⏸ Pause", callback_data="pause")],
         [InlineKeyboardButton("▶ Resume", callback_data="resume")],
-        [InlineKeyboardButton("📦 Queue", callback_data="queue")],
+        [InlineKeyboardButton("📦 Queue", callback_data="queue")]
     ])
 
 
 # ---------------- COMMAND ----------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🤖 *Downloader Control Panel*",
+        "🤖 *Xelios Service Manager*",
         reply_markup=main_menu(),
         parse_mode="Markdown"
     )
@@ -53,57 +62,46 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     data = query.data
 
-    # ✅ STATUS
     if data == "status":
-        status = service_status()
+        status = run_sv("status")
         await query.edit_message_text(
             f"📊 *Service Status*\n\n{status}",
-            parse_mode="Markdown",
-            reply_markup=main_menu()
+            reply_markup=main_menu(),
+            parse_mode="Markdown"
         )
 
-    # ✅ START SERVICE
     elif data == "start":
-        service_cmd("up")
+        run_sv("up")
         await query.edit_message_text(
             "▶ Downloader started",
             reply_markup=main_menu()
         )
 
-    # ✅ STOP SERVICE
     elif data == "stop":
-        service_cmd("down")
+        run_sv("down")
         await query.edit_message_text(
             "⏹ Downloader stopped",
             reply_markup=main_menu()
         )
 
-    # ✅ PAUSE
     elif data == "pause":
-        subprocess.run(["python3", "/path/to/tg-downloader.py", "pause"])
+        run_downloader("pause")
         await query.edit_message_text(
             "⏸ Downloads paused",
             reply_markup=main_menu()
         )
 
-    # ✅ RESUME
     elif data == "resume":
-        subprocess.run(["python3", "/path/to/tg-downloader.py", "resume"])
+        run_downloader("resume")
         await query.edit_message_text(
             "▶ Downloads resumed",
             reply_markup=main_menu()
         )
 
-    # ✅ QUEUE
     elif data == "queue":
-        result = subprocess.run(
-            ["python3", "/path/to/tg-downloader.py", "queue"],
-            capture_output=True,
-            text=True
-        )
-
+        q = run_downloader("queue")
         await query.edit_message_text(
-            f"📦 Queue size: {result.stdout.strip()}",
+            f"📦 Queue size: {q}",
             reply_markup=main_menu()
         )
 
