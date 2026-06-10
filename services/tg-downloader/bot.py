@@ -9,6 +9,7 @@ from telethon import TelegramClient, events, Button
 # ---------------- CONFIG ----------------
 API_ID = 30299030
 API_HASH = os.getenv("TELEGRAM_API_HASH")
+
 TARGET_GROUP_NAME = "Downloader"
 
 SESSION_PATH = os.path.expanduser(
@@ -32,9 +33,7 @@ lock = asyncio.Lock()
 async def start_handler(event):
     await event.reply(
         "📥 *Downloader Ready*",
-        buttons=[
-            [Button.inline("📦 Queue", b"queue")]
-        ],
+        buttons=[[Button.inline("📦 Queue", b"queue")]],
         parse_mode="Markdown"
     )
 
@@ -42,33 +41,28 @@ async def start_handler(event):
 @client.on(events.NewMessage)
 async def downloader(event):
     try:
-        # ✅ Ensure it's a group
         if not event.is_group:
             return
 
-        # ✅ Get group title safely
         chat = await event.get_chat()
 
         if not hasattr(chat, "title"):
             return
 
-        # ✅ Filter only your group
         if chat.title != TARGET_GROUP_NAME:
             return
 
-        # ✅ Only process messages with media
         if not event.message.media:
             return
 
-        # ✅ DEBUG (optional — remove later)
-        print(f"✅ Download triggered from group: {chat.title}")
+        print(f"✅ Triggered from group: {chat.title}")
 
-        # ✅ Continue with your existing logic below
         await handle_download(event)
 
     except Exception as e:
         print("❌ Handler error:", e)
 
+# ---------------- ADD DOWNLOAD ----------------
 async def handle_download(event):
     global counter
 
@@ -139,7 +133,11 @@ async def process_download(task_id):
     msg = task["msg"]
 
     try:
+        last_update = 0
+
         async def progress(current, total):
+            nonlocal last_update
+
             if task["cancelled"]:
                 raise Exception("Cancelled")
 
@@ -149,12 +147,17 @@ async def process_download(task_id):
             pct = int(current * 100 / total)
             task["progress"] = pct
 
+            # ✅ reduce spam updates
+            if pct - last_update < 5:
+                return
+            last_update = pct
+
             bar = "█" * (pct // 10) + "░" * (10 - pct // 10)
 
             await msg.edit(
                 f"⬇️ {task['name']}\n[{bar}] {pct}%",
                 buttons=[[
-                    Button.inline("⏸ Pause", f"pause:{task_id}".encode())
+                    Button.inline("⏸ Pause", f"pause:{task_id}".encode()),
                     Button.inline("❌ Remove", f"delete:{task_id}".encode())
                 ]]
             )
@@ -181,7 +184,7 @@ async def show_queue(event):
     buttons = []
 
     for task_id, task in downloads.items():
-        text += f"{task_id}. {task['name']} ({task['status']}, {task.get('progress',0)}%)\n"
+        text += f"{task_id}. {task['name']} ({task['status']} {task.get('progress',0)}%)\n"
 
         row = []
 
@@ -191,20 +194,19 @@ async def show_queue(event):
             else:
                 row.append(Button.inline("⏸", f"pause:{task_id}".encode()))
 
-        row.append(Button.inline("❌", f"delete:{task_id}"))
+        # ✅ FIX: encode here also
+        row.append(Button.inline("❌", f"delete:{task_id}".encode()))
 
         buttons.append(row)
 
-    buttons.append([Button.inline("📦 Queue", "queue".encode())])
+    buttons.append([Button.inline("🔄 Refresh", b"queue")])
 
     await event.edit(text, buttons=buttons, parse_mode="Markdown")
 
 # ---------------- MAIN ----------------
 async def main():
     await client.start()
-
     print("✅ Downloader running...")
-
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
