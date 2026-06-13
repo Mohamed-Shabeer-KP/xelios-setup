@@ -1,2 +1,4 @@
-pkg install openssh
+echo "[+] Installing Openbox..."
+
+pkg install -y openssh
 passwd
