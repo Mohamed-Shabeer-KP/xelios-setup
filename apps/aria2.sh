@@ -2,7 +2,7 @@ echo "[+] Installing aria2..."
 pkg install -y aria2
 
 mkdir -p "$HOME/.aria2"
-touch -p "$HOME/.aria2/aria2.session"
+touch "$HOME/.aria2/aria2.session"
 
 cat > "$HOME/.aria2/aria2.conf" <<EOF
 dir=$HOME/storage/shared/Download
