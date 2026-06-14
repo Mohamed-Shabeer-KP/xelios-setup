@@ -103,10 +103,12 @@ async def render_main_menu(query):
 # ---------------- COMMANDS ----------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     status = await get_login_status()
+    whoami = await get_whoami()
 
     await update.message.reply_text(
         f"🤖 *Xelios Service Manager*\n\n"
-        f"🔐 *Login Status:* {status}",
+        f"🔐 *Login Status:* {status}\n"
+        f"👤 *Whoami:* `{whoami}`",
         reply_markup=main_menu(),
         parse_mode="Markdown"
     )
@@ -229,6 +231,31 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("stop:"):
         msg = stop_service(data.split(":")[1])
         await query.edit_message_text(msg, reply_markup=main_menu())
+
+# ---------------- WHOAMI ----------------
+async def get_whoami():
+    client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
+
+    await client.connect()
+
+    try:
+        if await client.is_user_authorized():
+            me = await client.get_me()
+
+            if me.username:
+                return f"@{me.username}"
+            elif me.first_name:
+                return me.first_name
+            else:
+                return str(me.id)
+
+        return "Not Logged In"
+
+    except Exception:
+        return "Unknown"
+
+    finally:
+        await client.disconnect()
 
 # ---------------- MAIN ----------------
 def main():
