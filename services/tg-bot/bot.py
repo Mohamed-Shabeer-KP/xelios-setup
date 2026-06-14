@@ -3,6 +3,7 @@
 import os
 import subprocess
 import logging
+import getpass
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -234,28 +235,10 @@ async def router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ---------------- WHOAMI ----------------
 async def get_whoami():
-    client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
-
-    await client.connect()
-
     try:
-        if await client.is_user_authorized():
-            me = await client.get_me()
-
-            if me.username:
-                return f"@{me.username}"
-            elif me.first_name:
-                return me.first_name
-            else:
-                return str(me.id)
-
-        return "Not Logged In"
-
+        return getpass.getuser()
     except Exception:
-        return "Unknown"
-
-    finally:
-        await client.disconnect()
+        return "unknown"
 
 # ---------------- MAIN ----------------
 def main():
