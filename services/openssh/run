@@ -1,2 +1,2 @@
 #!/data/data/com.termux/files/usr/bin/bash
-exec sshd -D
+exec sshd -D -e
