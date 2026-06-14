@@ -108,8 +108,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         f"🤖 *Xelios Service Manager*\n\n"
-        f"🔐 *Login Status:* {status}\n"
-        f"👤 *Whoami:* `{whoami}`",
+        f"🔐 *Telethon Login Status:* {status}\n"
+        f"👤 *Termux User:* `{whoami}`",
         reply_markup=main_menu(),
         parse_mode="Markdown"
     )
