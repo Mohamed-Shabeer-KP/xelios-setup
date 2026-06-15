@@ -17,7 +17,7 @@ done
 rm -f "$BOT_DIR/down"
 
 # Start supervisor
-runsvdir "$SERVICES_DIR" 
+script -q -f "$HOME/storage/shared/download/runit.log" -c "runsvdir $SERVICES_DIR"
 
 sleep 2
 
