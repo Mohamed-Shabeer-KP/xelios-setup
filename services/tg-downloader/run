@@ -6,4 +6,4 @@ if [ -f "$ENV_FILE" ]; then
     export $(cat "$ENV_FILE" | xargs)
 fi
 
-exec python3 "$HOME/xelios-setup/services/tg-downloader/bot.py"
+exec python3 "$HOME/xelios-setup/services/tg-downloader/bot.py" >> ~/logs/tg-downloader.log 2>&1
