@@ -1,2 +1,2 @@
 #!/data/data/com.termux/files/usr/bin/bash
-exec sshd -D -e >> ~/logs/openssh.log 2>&1
+exec sshd -D -e 
