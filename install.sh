@@ -49,4 +49,8 @@ for app in apps/*.sh; do
     bash "$app"
 done
 
+echo "[+] Setup Logging..."
+
+mkdir -p "$HOME/logs"
+
 echo "[✅ DONE]"
